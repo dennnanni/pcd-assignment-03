@@ -1,13 +1,13 @@
-package pcd.ass01;
+package pcd.ass03.p01;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class BoidsModel {
     
-    private final List<Boid> boids;
-    private double separationWeight; 
+    private List<Boid> boids;
+    private List<Boid> boidsCopy;
+    private double separationWeight;
     private double alignmentWeight; 
     private double cohesionWeight; 
     private final double width;
@@ -16,15 +16,15 @@ public class BoidsModel {
     private final double perceptionRadius;
     private final double avoidRadius;
 
-    public BoidsModel(int nboids,  
-    						double initialSeparationWeight, 
-    						double initialAlignmentWeight, 
-    						double initialCohesionWeight,
-    						double width, 
-    						double height,
-    						double maxSpeed,
-    						double perceptionRadius,
-    						double avoidRadius){
+    public BoidsModel(
+            double initialSeparationWeight,
+            double initialAlignmentWeight,
+            double initialCohesionWeight,
+            double width,
+            double height,
+            double maxSpeed,
+            double perceptionRadius,
+            double avoidRadius){
         separationWeight = initialSeparationWeight;
         alignmentWeight = initialAlignmentWeight;
         cohesionWeight = initialCohesionWeight;
@@ -33,41 +33,44 @@ public class BoidsModel {
         this.maxSpeed = maxSpeed;
         this.perceptionRadius = perceptionRadius;
         this.avoidRadius = avoidRadius;
-        
-    	boids = new ArrayList<>();
-        for (int i = 0; i < nboids; i++) {
-        	P2d pos = new P2d(-width/2 + Math.random() * width, -height/2 + Math.random() * height);
-        	V2d vel = new V2d(Math.random() * maxSpeed/2 - maxSpeed/4, Math.random() * maxSpeed/2 - maxSpeed/4);
-        	boids.add(new Boid(pos, vel));
+    }
+
+    public void createBoids(int count) {
+        boids = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            P2d pos = new P2d(-width/2 + Math.random() * width, -height/2 + Math.random() * height);
+            V2d vel = new V2d(Math.random() * maxSpeed/2 - maxSpeed/4, Math.random() * maxSpeed/2 - maxSpeed/4);
+            boids.add(new Boid(pos, vel));
         }
 
+        makeCopy();
     }
     
-    public synchronized List<Boid> getBoids(){
+    public List<Boid> getBoids(){
     	return boids;
     }
     
-    public synchronized double getMinX() {
+    public double getMinX() {
     	return -width/2;
     }
 
-    public synchronized double getMaxX() {
+    public double getMaxX() {
     	return width/2;
     }
 
-    public synchronized double getMinY() {
+    public double getMinY() {
     	return -height/2;
     }
 
-    public synchronized double getMaxY() {
+    public double getMaxY() {
     	return height/2;
     }
     
-    public synchronized double getWidth() {
+    public double getWidth() {
     	return width;
     }
  
-    public synchronized double getHeight() {
+    public double getHeight() {
     	return height;
     }
 
@@ -95,15 +98,27 @@ public class BoidsModel {
     	return alignmentWeight;
     }
     
-    public synchronized double getMaxSpeed() {
+    public double getMaxSpeed() {
     	return maxSpeed;
     }
 
-    public synchronized double getAvoidRadius() {
+    public double getAvoidRadius() {
     	return avoidRadius;
     }
 
-    public synchronized double getPerceptionRadius() {
+    public double getPerceptionRadius() {
     	return perceptionRadius;
+    }
+
+    public void makeCopy() {
+        List<Boid> copy = new ArrayList<>();
+        for (Boid b : boids) {
+            copy.add(b.clone());
+        }
+        boidsCopy = copy;
+    }
+
+    public List<Boid> getBoidsCopy() {
+        return boidsCopy;
     }
 }

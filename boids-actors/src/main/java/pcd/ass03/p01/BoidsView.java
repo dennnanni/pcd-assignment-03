@@ -1,4 +1,4 @@
-package pcd.ass01;
+package pcd.ass03.p01;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -9,6 +9,10 @@ import java.util.Hashtable;
 
 public class BoidsView implements ChangeListener {
 
+	private static final String START = "START";
+	private static final String STOP = "STOP";
+	private static final String PAUSE = "PAUSE";
+	private static final String RESUME = "RESUME";
 	private final SimulationStateMonitor monitor;
 	private JFrame frame;
 	private BoidsPanel boidsPanel;
@@ -30,24 +34,9 @@ public class BoidsView implements ChangeListener {
 		LayoutManager layout = new BorderLayout();
 		cp.setLayout(layout);
 
-        boidsPanel = new BoidsPanel(this, model);
-		cp.add(BorderLayout.CENTER, boidsPanel);
+		JPanel buttonsPanel = getStatePanel(model, monitor, cp);
 
-        JPanel slidersPanel = new JPanel();
-
-		JButton pauseButton = new JButton("Pause");
-		pauseButton.addActionListener(e -> {
-			if (monitor.isPaused()) {
-				monitor.resume();
-				pauseButton.setText("Pause");
-			} else {
-				monitor.pause();
-				pauseButton.setText("Resume");
-			}
-		});
-
-        slidersPanel.add(pauseButton);
-
+		JPanel slidersPanel = new JPanel();
         cohesionSlider = makeSlider();
         separationSlider = makeSlider();
         alignmentSlider = makeSlider();
@@ -58,12 +47,82 @@ public class BoidsView implements ChangeListener {
         slidersPanel.add(alignmentSlider);
         slidersPanel.add(new JLabel("Cohesion"));
         slidersPanel.add(cohesionSlider);
-		        
+
+		cp.add(BorderLayout.NORTH, buttonsPanel);
 		cp.add(BorderLayout.SOUTH, slidersPanel);
 
-		frame.setContentPane(cp);	
-		
+		frame.setContentPane(cp);
+
         frame.setVisible(true);
+	}
+
+	private JPanel getStatePanel(BoidsModel model, SimulationStateMonitor monitor, JPanel cp) {
+		JPanel buttonsPanel = new JPanel();
+		buttonsPanel.setLayout(new FlowLayout());
+
+		JButton pauseButton = new JButton(PAUSE);
+		pauseButton.setEnabled(false);
+		pauseButton.addActionListener(e -> {
+			if (monitor.isPaused()) {
+				monitor.resume();
+			} else {
+				monitor.pause();
+			}
+
+			updatePauseButton(pauseButton);
+		});
+
+		JTextField boidsNumberField = new JTextField(15);
+
+		JButton startButton = new JButton(START);
+		startButton.addActionListener(e -> {
+			String input = boidsNumberField.getText();
+			if (checkInput(input) && monitor.isStopped()) {
+				model.createBoids(Integer.parseInt(input));
+				pauseButton.setEnabled(true);
+				monitor.start();
+				boidsPanel = new BoidsPanel(this, model);
+				cp.add(BorderLayout.CENTER, boidsPanel);
+			} else if (!monitor.isStopped()) {
+				try {
+					monitor.stop();
+					pauseButton.setEnabled(false);
+				} catch (InterruptedException ex) {}
+			}
+
+			updateStartButton(startButton);
+			updatePauseButton(pauseButton);
+		});
+
+		buttonsPanel.add(BorderLayout.WEST, boidsNumberField);
+		buttonsPanel.add(BorderLayout.CENTER, startButton);
+		buttonsPanel.add(BorderLayout.EAST, pauseButton);
+		return buttonsPanel;
+	}
+
+	private void updateStartButton(JButton button) {
+		if (monitor.isStopped()) {
+			button.setText(START);
+		} else {
+			button.setText(STOP);
+		}
+	}
+
+	private void updatePauseButton(JButton button) {
+		if (monitor.isPaused()) {
+			button.setText(RESUME);
+		} else {
+			button.setText(PAUSE);
+		}
+	}
+
+	private boolean checkInput(String input) {
+		try {
+			int value = Integer.parseInt(input);
+			return value > 0;
+		} catch (NumberFormatException ex) {
+			return false;
+		}
 	}
 
 	private JSlider makeSlider() {
