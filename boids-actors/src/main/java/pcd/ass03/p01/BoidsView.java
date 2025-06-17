@@ -1,5 +1,9 @@
 package pcd.ass03.p01;
 
+import akka.actor.typed.Behavior;
+import akka.actor.typed.javadsl.Behaviors;
+import pcd.ass03.p01.protocols.ViewProtocol;
+
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -54,6 +58,15 @@ public class BoidsView implements ChangeListener {
 		frame.setContentPane(cp);
 
         frame.setVisible(true);
+	}
+
+	public static Behavior<ViewProtocol> create() {
+		return Behaviors.receive(ViewProtocol.class)
+				.onMessage(ViewProtocol.Initialization.class, (pippo) -> {
+					System.out.println("View initialized");
+					return Behaviors.same();
+				})
+				.build();
 	}
 
 	private JPanel getStatePanel(BoidsModel model, SimulationStateMonitor monitor, JPanel cp) {

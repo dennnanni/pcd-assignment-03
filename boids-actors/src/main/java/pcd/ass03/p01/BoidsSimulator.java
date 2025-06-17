@@ -1,5 +1,9 @@
 package pcd.ass03.p01;
 
+import akka.actor.typed.Behavior;
+import akka.actor.typed.javadsl.Behaviors;
+import pcd.ass03.p01.protocols.SimulatorProtocol;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +37,7 @@ public class BoidsSimulator {
             try {
                 this.stateMonitor.waitIfPausedOrStopped();
                 if (workers.isEmpty()) {
-                    createThreads();
+                    // createActors();
                 }
             } catch (InterruptedException ex) {}
 
@@ -60,29 +64,20 @@ public class BoidsSimulator {
     		}
 
             if (stateMonitor.isStopped()) {
-                interruptThreads();
+                //interruptThreads();
             }
 
             workersMonitor.coordinatorDone();
     	}
     }
 
-    private void interruptThreads() {
-        for (Thread t : workers) {
-            t.interrupt();
-        }
-        workers.clear();
-    }
+	public static Behavior<SimulatorProtocol> create() {
+		return Behaviors.receive(SimulatorProtocol.class)
+			.onMessage(SimulatorProtocol.Initialization.class, (pippo) -> {
+				System.out.println("Simulator initialized");
+				return Behaviors.same();
+			})
+			.build();
+	}
 
-    private void createThreads() {
-        Barrier barrier = new Barrier(N_THREADS);
-        int boids = model.getBoids().size();
-		int divisionFactor = boids / N_THREADS + 1;
-		for (int i = 0; i < boids; i += divisionFactor) {
-			int controlledBoids = i + divisionFactor <= boids ? divisionFactor : (boids - i);
-			Worker worker = new Worker(i, controlledBoids, model, stateMonitor, barrier, workersMonitor);
-            workers.add(worker);
-			worker.start();
-		}
-    }
 }

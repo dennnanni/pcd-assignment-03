@@ -1,5 +1,9 @@
 package pcd.ass03.p01;
 
+import akka.actor.typed.Behavior;
+import akka.actor.typed.javadsl.Behaviors;
+import pcd.ass03.p01.protocols.ModelProtocol;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,5 +124,14 @@ public class BoidsModel {
 
     public List<Boid> getBoidsCopy() {
         return boidsCopy;
+    }
+
+    public static Behavior<ModelProtocol> create() {
+        return Behaviors.receive(ModelProtocol.class)
+            .onMessage(ModelProtocol.Initialization.class, (pippo) -> {
+                System.out.println("Model initialized");
+                return Behaviors.same();
+            })
+            .build();
     }
 }
