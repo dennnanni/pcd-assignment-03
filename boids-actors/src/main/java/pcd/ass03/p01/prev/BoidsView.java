@@ -1,15 +1,15 @@
-package pcd.ass03.p01;
+package pcd.ass03.p01.prev;
 
-import pcd.ass03.p01.protocols.CommonData;
+import akka.actor.typed.Behavior;
+import akka.actor.typed.javadsl.Behaviors;
+import pcd.ass03.p01.protocols.ViewProtocol;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import java.awt.*;
-import java.util.List;
 import java.util.Hashtable;
-import java.util.function.Consumer;
 
 public class BoidsView implements ChangeListener {
 
@@ -17,67 +17,71 @@ public class BoidsView implements ChangeListener {
 	private static final String STOP = "STOP";
 	private static final String PAUSE = "PAUSE";
 	private static final String RESUME = "RESUME";
+	private final SimulationStateMonitor monitor;
 	private JFrame frame;
 	private BoidsPanel boidsPanel;
 	private JSlider cohesionSlider, separationSlider, alignmentSlider;
+	private BoidsModel model;
 	private int width, height;
-	private final SimulationState state;
-
-	private Runnable stopSimulation;
-	private Consumer<CommonData.InitParameters> startSimulation;
-	private Runnable pauseSimulation;
-	private Runnable resumeSimulation;
-	private Consumer<CommonData.Factors> updateFactors;
-
-	public BoidsView(int width, int height) {
+	
+	public BoidsView(BoidsModel model, SimulationStateMonitor monitor, int width, int height) {
+		this.model = model;
+		this.monitor = monitor;
 		this.width = width;
 		this.height = height;
-		this.state = new SimulationState();
-
+		
 		frame = new JFrame("Boids Simulation");
-		frame.setSize(width, height);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(width, height);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		JPanel cp = new JPanel();
 		LayoutManager layout = new BorderLayout();
 		cp.setLayout(layout);
 
-		JPanel buttonsPanel = getStatePanel(cp);
+		JPanel buttonsPanel = getStatePanel(model, monitor, cp);
 
 		JPanel slidersPanel = new JPanel();
-		cohesionSlider = makeSlider();
-		separationSlider = makeSlider();
-		alignmentSlider = makeSlider();
+        cohesionSlider = makeSlider();
+        separationSlider = makeSlider();
+        alignmentSlider = makeSlider();
 
-		slidersPanel.add(new JLabel("Separation"));
-		slidersPanel.add(separationSlider);
-		slidersPanel.add(new JLabel("Alignment"));
-		slidersPanel.add(alignmentSlider);
-		slidersPanel.add(new JLabel("Cohesion"));
-		slidersPanel.add(cohesionSlider);
+        slidersPanel.add(new JLabel("Separation"));
+        slidersPanel.add(separationSlider);
+        slidersPanel.add(new JLabel("Alignment"));
+        slidersPanel.add(alignmentSlider);
+        slidersPanel.add(new JLabel("Cohesion"));
+        slidersPanel.add(cohesionSlider);
 
 		cp.add(BorderLayout.NORTH, buttonsPanel);
 		cp.add(BorderLayout.SOUTH, slidersPanel);
 
 		frame.setContentPane(cp);
 
-		frame.setVisible(true);
+        frame.setVisible(true);
 	}
 
-	private JPanel getStatePanel(JPanel cp) {
+	public static Behavior<ViewProtocol> create() {
+		return Behaviors.receive(ViewProtocol.class)
+				.onMessage(ViewProtocol.Initialization.class, (pippo) -> {
+					System.out.println("View initialized");
+					return Behaviors.same();
+				})
+				.build();
+	}
+
+	private JPanel getStatePanel(BoidsModel model, SimulationStateMonitor monitor, JPanel cp) {
 		JPanel buttonsPanel = new JPanel();
 		buttonsPanel.setLayout(new FlowLayout());
 
 		JButton pauseButton = new JButton(PAUSE);
 		pauseButton.setEnabled(false);
 		pauseButton.addActionListener(e -> {
-			if (state.isPaused()) {
-				resumeSimulation.run();
-				state.resume();
+			if (monitor.isPaused()) {
+				monitor.resume();
 			} else {
-				pauseSimulation.run();
-				state.pause();
+				monitor.pause();
 			}
+
 			updatePauseButton(pauseButton);
 		});
 
@@ -86,22 +90,17 @@ public class BoidsView implements ChangeListener {
 		JButton startButton = new JButton(START);
 		startButton.addActionListener(e -> {
 			String input = boidsNumberField.getText();
-			if (checkInput(input) && state.isStopped()) {
-				//model.createBoids(Integer.parseInt(input));
-				startSimulation.accept(new CommonData.InitParameters(
-						Integer.parseInt(input),
-						new CommonData.Factors(separationSlider.getValue() * 0.1,
-						alignmentSlider.getValue() * 0.1,
-						cohesionSlider.getValue() * 0.1)
-				));
+			if (checkInput(input) && monitor.isStopped()) {
+				model.createBoids(Integer.parseInt(input));
 				pauseButton.setEnabled(true);
-				state.start();
-				boidsPanel = new BoidsPanel(this, width);
+				monitor.start();
+				boidsPanel = new BoidsPanel(this, model);
 				cp.add(BorderLayout.CENTER, boidsPanel);
-			} else if (!state.isStopped()) {
-				state.stop();
-				stopSimulation.run();
-				pauseButton.setEnabled(false);
+			} else if (!monitor.isStopped()) {
+				try {
+					monitor.stop();
+					pauseButton.setEnabled(false);
+				} catch (InterruptedException ex) {}
 			}
 
 			updateStartButton(startButton);
@@ -115,7 +114,7 @@ public class BoidsView implements ChangeListener {
 	}
 
 	private void updateStartButton(JButton button) {
-		if (state.isStopped()) {
+		if (monitor.isStopped()) {
 			button.setText(START);
 		} else {
 			button.setText(STOP);
@@ -123,7 +122,7 @@ public class BoidsView implements ChangeListener {
 	}
 
 	private void updatePauseButton(JButton button) {
-		if (state.isPaused()) {
+		if (monitor.isPaused()) {
 			button.setText(RESUME);
 		} else {
 			button.setText(PAUSE);
@@ -140,7 +139,7 @@ public class BoidsView implements ChangeListener {
 	}
 
 	private JSlider makeSlider() {
-		var slider = new JSlider(JSlider.HORIZONTAL, 0, 20, 10);
+		var slider = new JSlider(JSlider.HORIZONTAL, 0, 20, 10);        
 		slider.setMajorTickSpacing(10);
 		slider.setMinorTickSpacing(1);
 		slider.setPaintTicks(true);
@@ -151,25 +150,29 @@ public class BoidsView implements ChangeListener {
 		labelTable.put( 20, new JLabel("2") );
 		slider.setLabelTable( labelTable );
 		slider.setPaintLabels(true);
-		slider.addChangeListener(this);
+        slider.addChangeListener(this);
 		return slider;
 	}
-
-	public void update(int frameRate, List<P2d> boids) {
+	
+	public void update(int frameRate) {
 		boidsPanel.setFrameRate(frameRate);
-		boidsPanel.updateBoids(boids);
 		boidsPanel.repaint();
 	}
 
 	@Override
 	public void stateChanged(ChangeEvent e) {
-		var sep = separationSlider.getValue() * 0.1;
-		var co = cohesionSlider.getValue() * 0.1;
-		var al = alignmentSlider.getValue() * 0.1;
-
-		updateFactors.accept(new CommonData.Factors(sep, al, co));
+		if (e.getSource() == separationSlider) {
+			var val = separationSlider.getValue();
+			model.setSeparationWeight(0.1*val);
+		} else if (e.getSource() == cohesionSlider) {
+			var val = cohesionSlider.getValue();
+			model.setCohesionWeight(0.1*val);
+		} else {
+			var val = alignmentSlider.getValue();
+			model.setAlignmentWeight(0.1*val);
+		}
 	}
-
+	
 	public int getWidth() {
 		return width;
 	}
@@ -178,23 +181,4 @@ public class BoidsView implements ChangeListener {
 		return height;
 	}
 
-	public void setStartSimulation(Consumer<CommonData.InitParameters> startSimulation) {
-		this.startSimulation = startSimulation;
-	}
-
-	public void setStopSimulation(Runnable stopSimulation) {
-		this.stopSimulation = stopSimulation;
-	}
-
-	public void setPauseSimulation(Runnable pauseSimulation) {
-		this.pauseSimulation = pauseSimulation;
-	}
-
-	public void setResumeSimulation(Runnable resumeSimulation) {
-		this.resumeSimulation = resumeSimulation;
-	}
-
-	public void setUpdateFactors(Consumer<CommonData.Factors> updateFactors) {
-		this.updateFactors = updateFactors;
-	}
 }

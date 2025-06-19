@@ -1,0 +1,47 @@
+Che messaggi devono mandarsi gli attori?
+
+View invia:
+1. valori degli slider
+2. stato della simulazione (avviata, in pausa, fermata)
+3. numero dei boids
+View riceve:
+0. inizializzazione della view
+1. boid da visualizzare
+
+
+Simulator invia:
+1. boids da visualizzare
+2. numero dei boids
+3. valori degli slider
+4. avvio del ricalcolo -> Model
+Simulator riceve:
+0. inizializzazione
+1. valori degli slider
+2. stato della simulazione (avviata, in pausa, fermata) -> si autogestisce e non avvia più computazioni
+3. numero dei boids
+4. boids da visualizzare
+
+stash dell'aggiornamento fino a resume (non valido per lo start)
+
+
+Model invia:
+1. update informazioni (vicini e slider)
+2. calcolo dei vicini -> altri attori???
+3. boids da visualizzare
+Model riceve:
+0. inizializzazione
+1. valori degli slider
+2. update simulazione
+4. avvio del ricalcolo -> Simulator
+5. stato stop -> uccide i boids
+
+
+Boids invia:
+1. velocità e posizioni aggiornate
+Boids riceve:
+1. avvio del ricalcolo -> Model (vicini e slider)
+
+velocità e posizioni aggiornamento unico
+
+
+

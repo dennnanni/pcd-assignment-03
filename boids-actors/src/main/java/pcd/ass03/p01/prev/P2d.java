@@ -1,6 +1,4 @@
-package pcd.ass03.p01;
-
-import pcd.ass03.p01.prev.V2d;
+package pcd.ass03.p01.prev;
 
 /**
  *

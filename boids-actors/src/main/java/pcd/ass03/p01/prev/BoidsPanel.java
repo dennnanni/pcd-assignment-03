@@ -1,28 +1,22 @@
-package pcd.ass03.p01;
+package pcd.ass03.p01.prev;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 
 public class BoidsPanel extends JPanel {
 
-	private final double width;
-	private BoidsView view;
-	private List<P2d> boidsPositions;
+	private BoidsView view; 
+	private BoidsModel model;
     private int framerate;
 
-    public BoidsPanel(BoidsView view, double width) {
+    public BoidsPanel(BoidsView view, BoidsModel model) {
+    	this.model = model;
     	this.view = view;
-		this.width = width;
     }
 
     public void setFrameRate(int framerate) {
     	this.framerate = framerate;
     }
-
-	public void updateBoids(List<P2d> boidsPositions) {
-		this.boidsPositions = boidsPositions;
-	}
     
     @Override
     protected void paintComponent(Graphics g) {
@@ -31,19 +25,24 @@ public class BoidsPanel extends JPanel {
         
         var w = view.getWidth();
         var h = view.getHeight();
-        var xScale = w/width;
+        var envWidth = model.getWidth();
+        var xScale = w/envWidth;
+        // var envHeight = model.getHeight();
+        // var yScale = h/envHeight;
+
+        var boids = model.getBoidsCopy();
 
         g.setColor(Color.BLUE);
-        for (P2d boid : boidsPositions) {
-        	var x = boid.x();
-        	var y = boid.y();
+        for (Boid boid : boids) {
+        	var x = boid.getPos().x();
+        	var y = boid.getPos().y();
         	int px = (int)(w/2 + x*xScale);
         	int py = (int)(h/2 - y*xScale);
             g.fillOval(px,py, 5, 5);
         }
         
         g.setColor(Color.BLACK);
-        g.drawString("Num. Boids: " + boidsPositions.size(), 10, 25);
+        g.drawString("Num. Boids: " + boids.size(), 10, 25);
         g.drawString("Framerate: " + framerate, 10, 40);
    }
 }

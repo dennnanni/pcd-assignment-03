@@ -1,4 +1,4 @@
-package pcd.ass03.p01;
+package pcd.ass03.p01.prev;
 
 public class SyncWorkersMonitor {
     private final int totalWorkers;

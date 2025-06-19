@@ -1,13 +1,17 @@
-package pcd.ass03.p01;
+package pcd.ass03.p01.prev;
 
+import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.Behaviors;
 import pcd.ass03.p01.protocols.ModelProtocol;
+import pcd.ass03.p01.protocols.SimulatorProtocol;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class BoidsModel {
+
+    private ActorRef<SimulatorProtocol> controller;
     
     private List<Boid> boids;
     private List<Boid> boidsCopy;
@@ -127,11 +131,12 @@ public class BoidsModel {
     }
 
     public static Behavior<ModelProtocol> create() {
+        return behavior(null);
+    }
+
+    public static Behavior<ModelProtocol> behavior(ActorRef<SimulatorProtocol> controller) {
         return Behaviors.receive(ModelProtocol.class)
-            .onMessage(ModelProtocol.Initialization.class, (pippo) -> {
-                System.out.println("Model initialized");
-                return Behaviors.same();
-            })
+            .onMessage(ModelProtocol.Initialization.class, message -> behavior(message.controller()))
             .build();
     }
 }
