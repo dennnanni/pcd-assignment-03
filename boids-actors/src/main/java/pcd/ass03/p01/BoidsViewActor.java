@@ -26,6 +26,7 @@ public class BoidsViewActor extends AbstractBehavior<ViewProtocol> {
 	public Receive<ViewProtocol> createReceive() {
 		return newReceiveBuilder()
 				.onMessage(ViewProtocol.Initialization.class, this::onInitialization)
+				.onMessage(ViewProtocol.Update.class, this::onUpdate)
 				.build();
 	}
 
@@ -33,12 +34,18 @@ public class BoidsViewActor extends AbstractBehavior<ViewProtocol> {
 		getContext().getLog().info("View initialized");
 		simulator = initialization.simulator();
 		// TODO: create constants
-		view = new BoidsView(300, 400);
+		view = new BoidsView(600, 800);
 		view.setStartSimulation(init -> simulator.tell(new SimulatorProtocol.Start(init)));
 		view.setStopSimulation(() -> simulator.tell(new SimulatorProtocol.Stop()));
 		view.setPauseSimulation(() -> simulator.tell(new SimulatorProtocol.Pause()));
 		view.setResumeSimulation(() -> simulator.tell(new SimulatorProtocol.Resume()));
-		view.setUpdateFactors(factors -> simulator.tell(new SimulatorProtocol.UpdateFactors(factors)));
+		view.setUpdateFactors(factors -> simulator.tell(new SimulatorProtocol.UpdateParameters(factors)));
+		return this;
+	}
+
+	private Behavior<ViewProtocol> onUpdate(ViewProtocol.Update update) {
+		getContext().getLog().info("View updated: framerate = {}, positions = {}", update.framerate(), update.positions().size());
+		view.update(update.framerate(), update.positions());
 		return this;
 	}
 }

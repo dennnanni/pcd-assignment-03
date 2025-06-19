@@ -136,7 +136,7 @@ public class BoidsModel {
 
     public static Behavior<ModelProtocol> behavior(ActorRef<SimulatorProtocol> controller) {
         return Behaviors.receive(ModelProtocol.class)
-            .onMessage(ModelProtocol.Initialization.class, message -> behavior(message.controller()))
+            .onMessage(ModelProtocol.Initialization.class, message -> behavior(message.simulator()))
             .build();
     }
 }

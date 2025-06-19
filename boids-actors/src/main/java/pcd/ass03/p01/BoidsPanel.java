@@ -2,13 +2,14 @@ package pcd.ass03.p01;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class BoidsPanel extends JPanel {
 
 	private final double width;
 	private BoidsView view;
-	private List<P2d> boidsPositions;
+	private List<P2d> boidsPositions = new ArrayList<>();
     private int framerate;
 
     public BoidsPanel(BoidsView view, double width) {
@@ -33,7 +34,6 @@ public class BoidsPanel extends JPanel {
         var h = view.getHeight();
         var xScale = w/width;
 
-        g.setColor(Color.BLUE);
         for (P2d boid : boidsPositions) {
         	var x = boid.x();
         	var y = boid.y();
