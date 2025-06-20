@@ -1,6 +1,6 @@
 package pcd.ass03.p01;
 
-import pcd.ass03.p01.protocols.CommonData;
+import pcd.ass03.p01.protocols.ViewData;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -10,7 +10,6 @@ import java.awt.*;
 import java.util.List;
 import java.util.Hashtable;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 public class BoidsView implements ChangeListener {
 
@@ -25,10 +24,10 @@ public class BoidsView implements ChangeListener {
 	private final SimulationState state;
 
 	private Runnable stopSimulation;
-	private Consumer<CommonData.InitParameters> startSimulation;
+	private Consumer<ViewData.InitData> startSimulation;
 	private Runnable pauseSimulation;
 	private Runnable resumeSimulation;
-	private Consumer<CommonData.Parameters> updateFactors;
+	private Consumer<ViewData.Parameters> updateParameters;
 
 	public BoidsView(int width, int height) {
 		this.width = width;
@@ -89,11 +88,11 @@ public class BoidsView implements ChangeListener {
 			String input = boidsNumberField.getText();
 			if (checkInput(input) && state.isStopped()) {
 				//model.createBoids(Integer.parseInt(input));
-				startSimulation.accept(new CommonData.InitParameters(
+				startSimulation.accept(new ViewData.InitData(
 						Integer.parseInt(input),
-						new CommonData.Parameters(separationSlider.getValue() * 0.1,
+						separationSlider.getValue() * 0.1,
 						alignmentSlider.getValue() * 0.1,
-						cohesionSlider.getValue() * 0.1)
+						cohesionSlider.getValue() * 0.1
 				));
 				pauseButton.setEnabled(true);
 				state.start();
@@ -168,7 +167,7 @@ public class BoidsView implements ChangeListener {
 		var co = cohesionSlider.getValue() * 0.1;
 		var al = alignmentSlider.getValue() * 0.1;
 
-		updateFactors.accept(new CommonData.Parameters(sep, al, co));
+		updateParameters.accept(new ViewData.Parameters(sep, al, co));
 	}
 
 	public int getWidth() {
@@ -179,7 +178,7 @@ public class BoidsView implements ChangeListener {
 		return height;
 	}
 
-	public void setStartSimulation(Consumer<CommonData.InitParameters> startSimulation) {
+	public void setStartSimulation(Consumer<ViewData.InitData> startSimulation) {
 		this.startSimulation = startSimulation;
 	}
 
@@ -195,7 +194,7 @@ public class BoidsView implements ChangeListener {
 		this.resumeSimulation = resumeSimulation;
 	}
 
-	public void setUpdateFactors(Consumer<CommonData.Parameters> updateFactors) {
-		this.updateFactors = updateFactors;
+	public void setUpdateParameters(Consumer<ViewData.Parameters> updateParameters) {
+		this.updateParameters = updateParameters;
 	}
 }

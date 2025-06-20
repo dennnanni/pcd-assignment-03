@@ -8,7 +8,7 @@ import java.util.List;
 public interface SimulatorProtocol {
 	record Initialization(ActorRef<ModelProtocol> model, ActorRef<ViewProtocol> view) implements SimulatorProtocol {}
 
-	record Start(CommonData.InitParameters initParameters) implements SimulatorProtocol {}
+	record Start(int boidsCount, double alignment, double separation, double cohesion) implements SimulatorProtocol {}
 
 	record Stop() implements SimulatorProtocol {}
 
@@ -16,7 +16,7 @@ public interface SimulatorProtocol {
 
 	record Resume() implements SimulatorProtocol {}
 
-	record UpdateParameters(CommonData.Parameters parameters) implements SimulatorProtocol {}
+	record UpdateParameters(double alignment, double separation, double cohesion) implements SimulatorProtocol {}
 
 	record Tick() implements SimulatorProtocol {}
 

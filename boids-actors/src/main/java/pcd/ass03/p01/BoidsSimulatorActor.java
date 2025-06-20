@@ -56,7 +56,7 @@ public class BoidsSimulatorActor extends AbstractBehavior<SimulatorProtocol> {
 
 	private Behavior<SimulatorProtocol> onStart(SimulatorProtocol.Start start) {
 		getContext().getLog().info("Starting simulation");
-		model.tell(new ModelProtocol.Setup(start.initParameters()));
+		model.tell(new ModelProtocol.Setup(start.boidsCount(), start.alignment(), start.separation(), start.cohesion()));
 		this.time = System.currentTimeMillis();
 		return this;
 	}
@@ -81,7 +81,7 @@ public class BoidsSimulatorActor extends AbstractBehavior<SimulatorProtocol> {
 
 	private Behavior<SimulatorProtocol> onParametersChange(SimulatorProtocol.UpdateParameters update) {
 		getContext().getLog().info("Updating simulation parameters");
-		model.tell(new ModelProtocol.UpdateParameters(update.parameters()));
+		model.tell(new ModelProtocol.UpdateParameters(update.alignment(), update.separation(), update.cohesion()));
 		return this;
 	}
 
@@ -91,7 +91,7 @@ public class BoidsSimulatorActor extends AbstractBehavior<SimulatorProtocol> {
 
 		if (elapsedTime < frameratePeriod) {
 			Duration delay = Duration.ofMillis(frameratePeriod - elapsedTime);
-			getContext().getLog().info("Updating boids positions with {} ms delay", delay.toMillis());
+			//getContext().getLog().info("Updating boids positions with {} ms delay", delay.toMillis());
 
 			framerate = FRAMERATE;
 			getContext().scheduleOnce(delay, view, new ViewProtocol.Update(framerate, update.positions()));

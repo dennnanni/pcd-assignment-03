@@ -10,14 +10,17 @@ import pcd.ass03.p01.protocols.ViewProtocol;
 
 public class BoidsSimulation {
 
+	private static final int WIDTH = 600;
+	private static final int HEIGHT = 800;
+
 	public static void main(String[] args) {
 		Behavior<Void> rootBehavior = Behaviors.setup(context -> {
 			ActorRef<SimulatorProtocol> simulatorActor =
 					context.spawn(BoidsSimulatorActor.create(), "boids-simulator");
 			ActorRef<ModelProtocol> modelActor =
-					context.spawn(BoidsModelActor.create(), "boids-model");
+					context.spawn(BoidsModelActor.create(WIDTH, HEIGHT), "boids-model");
 			ActorRef<ViewProtocol> viewActor =
-					context.spawn(BoidsViewActor.create(), "boids-view");
+					context.spawn(BoidsViewActor.create(WIDTH, HEIGHT), "boids-view");
 
 			// invio dei messaggi di inizializzazione
 			viewActor.tell(new ViewProtocol.Initialization(simulatorActor));
