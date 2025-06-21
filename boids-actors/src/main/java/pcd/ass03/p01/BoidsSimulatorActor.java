@@ -91,7 +91,6 @@ public class BoidsSimulatorActor extends AbstractBehavior<SimulatorProtocol> {
 
 		if (elapsedTime < frameratePeriod) {
 			Duration delay = Duration.ofMillis(frameratePeriod - elapsedTime);
-			//getContext().getLog().info("Updating boids positions with {} ms delay", delay.toMillis());
 
 			framerate = FRAMERATE;
 			getContext().scheduleOnce(delay, view, new ViewProtocol.Update(framerate, update.positions()));
@@ -101,9 +100,8 @@ public class BoidsSimulatorActor extends AbstractBehavior<SimulatorProtocol> {
 			framerate = (int) (1000 / elapsedTime);
 			view.tell(new ViewProtocol.Update(framerate, update.positions()));
 			model.tell(new ModelProtocol.ComputeNewPositions());
-			getContext().scheduleOnce(Duration.ZERO, getContext().getSelf(), new SimulatorProtocol.Tick());
+			getContext().getSelf().tell(new SimulatorProtocol.Tick());
 		}
-			getContext().getLog().info("Elapsed {}, framePeriod {}, framerate {}", elapsedTime, frameratePeriod, framerate);
 
 		return this;
 	}

@@ -37,7 +37,6 @@ public class BoidsViewActor extends AbstractBehavior<ViewProtocol> {
 	private Behavior<ViewProtocol> onInitialization(ViewProtocol.Initialization initialization) {
 		getContext().getLog().info("View initialized");
 		simulator = initialization.simulator();
-		// TODO: create constants
 		view = new BoidsView(width, height);
 		view.setStartSimulation(init -> simulator.tell(new SimulatorProtocol.Start(
 				init.boidsCount(), init.alignment(), init.separation(), init.cohesion())));
@@ -50,8 +49,6 @@ public class BoidsViewActor extends AbstractBehavior<ViewProtocol> {
 	}
 
 	private Behavior<ViewProtocol> onUpdate(ViewProtocol.Update update) {
-		getContext().getLog().info("View updated: framerate = {}, positions = {}",
-				update.framerate(), update.positions().size());
 		view.update(update.framerate(), update.positions());
 		return this;
 	}

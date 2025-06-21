@@ -4,6 +4,8 @@ import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.Behaviors;
+import pcd.ass03.p01.model.ModelSetupBehaviour;
+import pcd.ass03.p01.model.ModelState;
 import pcd.ass03.p01.protocols.ModelProtocol;
 import pcd.ass03.p01.protocols.SimulatorProtocol;
 import pcd.ass03.p01.protocols.ViewProtocol;
@@ -17,8 +19,10 @@ public class BoidsSimulation {
 		Behavior<Void> rootBehavior = Behaviors.setup(context -> {
 			ActorRef<SimulatorProtocol> simulatorActor =
 					context.spawn(BoidsSimulatorActor.create(), "boids-simulator");
+//			ActorRef<ModelProtocol> modelActor =
+//					context.spawn(BoidsModelActor.create(WIDTH, HEIGHT), "boids-model");
 			ActorRef<ModelProtocol> modelActor =
-					context.spawn(BoidsModelActor.create(WIDTH, HEIGHT), "boids-model");
+					context.spawn(ModelSetupBehaviour.create(new ModelState(null, WIDTH, HEIGHT)), "boids-model");
 			ActorRef<ViewProtocol> viewActor =
 					context.spawn(BoidsViewActor.create(WIDTH, HEIGHT), "boids-view");
 

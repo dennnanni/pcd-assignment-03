@@ -87,7 +87,6 @@ public class BoidsView implements ChangeListener {
 		startButton.addActionListener(e -> {
 			String input = boidsNumberField.getText();
 			if (checkInput(input) && state.isStopped()) {
-				//model.createBoids(Integer.parseInt(input));
 				startSimulation.accept(new ViewData.InitData(
 						Integer.parseInt(input),
 						separationSlider.getValue() * 0.1,
