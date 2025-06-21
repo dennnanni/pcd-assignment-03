@@ -25,7 +25,13 @@ public class ModelSetupBehaviour extends AbstractBehavior<ModelProtocol> {
 		return newReceiveBuilder()
 				.onMessage(ModelProtocol.Initialization.class, this::onInitialization)
 				.onMessage(ModelProtocol.Setup.class, this::onSetup)
+				.onMessage(ModelProtocol.UpdateBoid.class, this::onUpdateBoid)
 				.build();
+	}
+
+	private Behavior<ModelProtocol> onUpdateBoid(ModelProtocol.UpdateBoid updateBoid) {
+		getContext().getLog().info("Update boid message received: ignored in setup phase");
+		return this;
 	}
 
 	private Behavior<ModelProtocol> onInitialization(ModelProtocol.Initialization initialization) {

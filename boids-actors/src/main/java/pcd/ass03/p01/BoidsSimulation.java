@@ -9,6 +9,7 @@ import pcd.ass03.p01.model.ModelState;
 import pcd.ass03.p01.protocols.ModelProtocol;
 import pcd.ass03.p01.protocols.SimulatorProtocol;
 import pcd.ass03.p01.protocols.ViewProtocol;
+import pcd.ass03.p01.simulator.SimulatorState;
 
 public class BoidsSimulation {
 
@@ -18,7 +19,7 @@ public class BoidsSimulation {
 	public static void main(String[] args) {
 		Behavior<Void> rootBehavior = Behaviors.setup(context -> {
 			ActorRef<SimulatorProtocol> simulatorActor =
-					context.spawn(BoidsSimulatorActor.create(), "boids-simulator");
+					context.spawn(BoidsSimulatorActor.create(new SimulatorState()), "boids-simulator");
 //			ActorRef<ModelProtocol> modelActor =
 //					context.spawn(BoidsModelActor.create(WIDTH, HEIGHT), "boids-model");
 			ActorRef<ModelProtocol> modelActor =
