@@ -26,7 +26,13 @@ public class ModelSetupBehaviour extends AbstractBehavior<ModelProtocol> {
 				.onMessage(ModelProtocol.Initialization.class, this::onInitialization)
 				.onMessage(ModelProtocol.Setup.class, this::onSetup)
 				.onMessage(ModelProtocol.UpdateBoid.class, this::onUpdateBoid)
+				.onMessage(ModelProtocol.ComputeNewPositions.class, this::onComputeNewPositions)
 				.build();
+	}
+
+	private Behavior<ModelProtocol> onComputeNewPositions(ModelProtocol.ComputeNewPositions computeNewPositions) {
+		getContext().getLog().info("Compute new positions message received: ignored in setup phase");
+		return this;
 	}
 
 	private Behavior<ModelProtocol> onUpdateBoid(ModelProtocol.UpdateBoid updateBoid) {

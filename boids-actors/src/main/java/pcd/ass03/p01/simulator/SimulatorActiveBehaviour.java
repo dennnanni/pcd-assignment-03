@@ -1,4 +1,4 @@
-package pcd.ass03.p01;
+package pcd.ass03.p01.simulator;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -9,27 +9,26 @@ import akka.actor.typed.javadsl.Receive;
 import pcd.ass03.p01.protocols.ModelProtocol;
 import pcd.ass03.p01.protocols.SimulatorProtocol;
 import pcd.ass03.p01.protocols.ViewProtocol;
-import pcd.ass03.p01.simulator.SimulatorState;
 
 import java.time.Duration;
 
-public class BoidsSimulatorActor extends AbstractBehavior<SimulatorProtocol> {
+public class SimulatorActiveBehaviour extends AbstractBehavior<SimulatorProtocol> {
 
 	private static final int FRAMERATE = 25; // frames per second
 	private SimulatorState state;
 	private long time;
 	private int framerate = 25;
 
-	public BoidsSimulatorActor(ActorContext<SimulatorProtocol> context, SimulatorState state) {
+	public SimulatorActiveBehaviour(ActorContext<SimulatorProtocol> context, SimulatorState state) {
 		super(context);
 		this.state = state;
 	}
 
 	public static Behavior<SimulatorProtocol> create(SimulatorState state) {
-		return Behaviors.setup(ctx -> new BoidsSimulatorActor(ctx, state));
+		return Behaviors.setup(ctx -> new SimulatorActiveBehaviour(ctx, state));
 	}
 
-	public BoidsSimulatorActor withView(ActorRef<ViewProtocol> view) {
+	public SimulatorActiveBehaviour withView(ActorRef<ViewProtocol> view) {
 		this.state = new SimulatorState(state.getModel(), view);
 		return this;
 	}
@@ -73,7 +72,7 @@ public class BoidsSimulatorActor extends AbstractBehavior<SimulatorProtocol> {
 
 	private Behavior<SimulatorProtocol> onPause(SimulatorProtocol.Pause pause) {
 		getContext().getLog().info("Pausing simulation");
-		return BoidsSimulatorPaused.create(state);
+		return SimulatorPausedBehaviour.create(state);
 	}
 
 	private Behavior<SimulatorProtocol> onParametersChange(SimulatorProtocol.UpdateParameters update) {
