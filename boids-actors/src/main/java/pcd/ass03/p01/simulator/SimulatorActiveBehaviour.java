@@ -47,6 +47,8 @@ public class SimulatorActiveBehaviour extends AbstractBehavior<SimulatorProtocol
 	}
 
 	private Behavior<SimulatorProtocol> onTick(SimulatorProtocol.Tick tick) {
+		state.getView().tell(new ViewProtocol.Update(framerate, tick.positions()));
+		state.getModel().tell(new ModelProtocol.ComputeNewPositions());
 		this.time = System.currentTimeMillis();
 		return this;
 	}
@@ -89,14 +91,10 @@ public class SimulatorActiveBehaviour extends AbstractBehavior<SimulatorProtocol
 			Duration delay = Duration.ofMillis(frameratePeriod - elapsedTime);
 
 			framerate = FRAMERATE;
-			getContext().scheduleOnce(delay, state.getView(), new ViewProtocol.Update(framerate, update.positions()));
-			getContext().scheduleOnce(delay, state.getModel(), new ModelProtocol.ComputeNewPositions());
-			getContext().scheduleOnce(delay, getContext().getSelf(), new SimulatorProtocol.Tick());
+			getContext().scheduleOnce(delay, getContext().getSelf(), new SimulatorProtocol.Tick(update.positions()));
 		} else {
 			framerate = (int) (1000 / elapsedTime);
-			state.getView().tell(new ViewProtocol.Update(framerate, update.positions()));
-			state.getModel().tell(new ModelProtocol.ComputeNewPositions());
-			getContext().getSelf().tell(new SimulatorProtocol.Tick());
+			getContext().getSelf().tell(new SimulatorProtocol.Tick(update.positions()));
 		}
 
 		return this;

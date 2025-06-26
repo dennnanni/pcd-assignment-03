@@ -18,7 +18,7 @@ public interface SimulatorProtocol {
 
 	record UpdateParameters(double alignment, double separation, double cohesion) implements SimulatorProtocol {}
 
-	record Tick() implements SimulatorProtocol {}
+	record Tick(List<P2d> positions) implements SimulatorProtocol {}
 
 	record Update(List<P2d> positions) implements SimulatorProtocol {}
 }
