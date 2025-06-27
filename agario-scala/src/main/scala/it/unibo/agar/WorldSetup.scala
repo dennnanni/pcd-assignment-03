@@ -2,6 +2,7 @@ package it.unibo.agar
 
 import akka.actor.typed.ActorSystem
 import it.unibo.agar.actor.PlayerActor.Init
+import it.unibo.agar.actor.ZoneManager.GetZone
 import it.unibo.agar.actor.{PlayerActor, ZoneManager}
 import it.unibo.agar.view.LocalView
 
@@ -27,12 +28,15 @@ object Main extends SimpleSwingApplication:
 
   private val width = 1000
   private val height = 1000
-  private val manager = ActorSystem(ZoneManager(1000, 1000, 100), "AgarGameSystem")
+  private val manager = ActorSystem(ZoneManager(1200, 1200, 400), "AgarGameSystem")
   
+  
+
   private val playerActor = manager.systemActorOf(
     PlayerActor("p1"),
     "Player1"
   )
+  
 
 //  private val timer = new Timer()
 //  private val task: TimerTask = new TimerTask:

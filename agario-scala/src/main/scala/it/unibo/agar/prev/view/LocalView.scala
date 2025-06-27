@@ -6,7 +6,7 @@ import java.awt.Graphics2D
 import scala.swing.*
 
 class LocalView(manager: MockGameStateManager, playerId: String) extends MainFrame:
-  
+
   val world: World = null
 
   title = s"Agar.io - Local View ($playerId)"

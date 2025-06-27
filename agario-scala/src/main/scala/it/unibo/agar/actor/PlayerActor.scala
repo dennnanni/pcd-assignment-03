@@ -2,7 +2,7 @@ package it.unibo.agar.actor
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import it.unibo.agar.model.{Coord, Food, Player, ViewWorld}
+import it.unibo.agar.model.{Coord, Food, Player, Position, ViewWorld}
 import it.unibo.agar.view.LocalView
 
 import scala.swing.Swing.onEDT
@@ -26,38 +26,43 @@ class PlayerEntity(
   import PlayerActor.*
 
   private var zoneManager: ActorRef[ZoneManager.Command] = null
-  private var currentZone: Option[ActorRef[ZoneActor.Command]] = None
-  private val view: LocalView = LocalView(playerId)
+  private var currentZones: Seq[ActorRef[ZoneActor.Command]] = Seq.empty
+  private val view: LocalView = LocalView(playerId, (x: Double, y: Double) =>
+    context.self ! MoveTo(x, y)
+  )
+  private var player: Player = Player(playerId, 500, 500, 100.0) // Initial position and mass
 
   def idle: Behavior[Command] = Behaviors.receiveMessage {
     case Init(zm) =>
       context.log.info(s"$playerId initialized")
       zoneManager = zm
       onEDT {
-        view.showPlayer(Player(playerId, 500, 500, 100.0)) // Initial position and mass
+        view.updatePlayer(player) // TODO: randomize initial position
         view.open()
       }
-      moving(0.0, 0.0) // Start in the center of the world
+      val zones: Seq[Position] = player.computeSightLimit(1000, 1000) // TODO: use world size
+      zones.foreach { zone =>
+        zm ! ZoneManager.GetZone(zone.x, zone.y, replyAdapter)
+      }
+      moving(500, 500) // Start in the center of the world
     case _ => Behaviors.same
   }
 
   def moving(x: Double, y: Double): Behavior[Command] = Behaviors.receiveMessage {
-    case MoveTo(x, y) =>
-      context.log.info(s"$playerId moving to ($x, $y)")
-      zoneManager ! ZoneManager.GetZone(x, y, replyAdapter)
+    case MoveTo(newX, newY) =>
+      context.log.info(s"$playerId moving to ($newX, $newY)")
+      val newPosition = Position(newX, newY)
+      player = player.copy(x = player.x + newX, y = player.y + newY) // Update player position
+      view.updatePlayer(player)
+      zoneManager ! ZoneManager.GetZone(newX, newY, replyAdapter)
       Behaviors.same
     case ZoneLocated(_, zone) =>
-      currentZone.foreach(_ ! ZoneActor.LeaveZone(playerId))
-      zone ! ZoneActor.EnterZone(playerId)
-      currentZone = Some(zone)
+      zone ! ZoneActor.AddFood()
+      zone ! ZoneActor.EnterZone(player, context.self)
+      currentZones = currentZones.appended(zone)
       Behaviors.same
     case UpdateWorld(players, foods) =>
-      currentZone match {
-        case Some(zone) =>
-          view.updateWorld(ViewWorld(players, foods))
-        case None =>
-          context.log.warn(s"$playerId is not in any zone, cannot update view")
-      }
+      view.updateWorld(ViewWorld(players, foods))
       Behaviors.same
 
     case _ => Behaviors.unhandled
@@ -68,4 +73,3 @@ class PlayerEntity(
       ZoneLocated(coord, ref)
     }
 
-  // Devi fornire il riferimento al zoneManager esternamente

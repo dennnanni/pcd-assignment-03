@@ -5,7 +5,7 @@ import it.unibo.agar.model.{Player, ViewWorld}
 import java.awt.Graphics2D
 import scala.swing.*
 
-class LocalView(playerId: String) extends MainFrame:
+class LocalView(playerId: String, movementReaction: (Double, Double) => Unit) extends MainFrame:
 
   var viewWorld: ViewWorld = ViewWorld.empty // Initialize with an empty world
 
@@ -31,17 +31,20 @@ class LocalView(playerId: String) extends MainFrame:
       playerOpt.foreach: player =>
         val dx = (mousePos.x - size.width / 2) * 0.01
         val dy = (mousePos.y - size.height / 2) * 0.01
-        // manager.movePlayerDirection(playerId, dx, dy) TODO: implement player movement logic
+        movementReaction(dx, dy)
       repaint()
     }
-    
+
   def updateWorld(newWorld: ViewWorld): Unit =
     // Update the view world with the new state
-    this.viewWorld = newWorld // TODO: ci vuole una copia? va usato EDT?
+    this.viewWorld = this.viewWorld.appendPlayers(newWorld.players) // TODO: ci vuole una copia? va usato EDT?
+    this.viewWorld = this.viewWorld.appendFood(newWorld.foods)
+    println(viewWorld.foods)
     repaint()
-    
-  def showPlayer(player: Player): Unit =
+
+  def updatePlayer(player: Player): Unit =
     // Show a specific player in the view
     this.viewWorld = this.viewWorld.updatePlayer(player)
     repaint()
-    
+
+

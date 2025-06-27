@@ -17,7 +17,7 @@ object ZoneManager:
         grid.allCoords.map { coord =>
           val (minW, maxW, minH, maxH) = grid.boundsOf(coord)
           val ref = context.spawn(
-            ZoneActor(minW, maxW, minH, maxH),
+            ZoneActor(minW, maxW, minH, maxH, coord),
             s"zone-${coord.x}-${coord.y}"
           )
           context.log.info("Created zone actor for coord: {}", coord)
