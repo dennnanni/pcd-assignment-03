@@ -1,9 +1,9 @@
 package it.unibo.agar
 
 import akka.actor.typed.ActorSystem
+import it.unibo.agar.actor.PlayerActor.Init
 import it.unibo.agar.actor.{PlayerActor, ZoneManager}
-import it.unibo.agar.model.{AIMovement, GameInitializer, MockGameStateManager, World}
-import it.unibo.agar.view.{GlobalView, LocalView}
+import it.unibo.agar.view.LocalView
 
 import java.awt.Window
 import java.util.{Timer, TimerTask}
@@ -28,6 +28,11 @@ object Main extends SimpleSwingApplication:
   private val width = 1000
   private val height = 1000
   private val manager = ActorSystem(ZoneManager(1000, 1000, 100), "AgarGameSystem")
+  
+  private val playerActor = manager.systemActorOf(
+    PlayerActor("p1"),
+    "Player1"
+  )
 
 //  private val timer = new Timer()
 //  private val task: TimerTask = new TimerTask:
@@ -37,8 +42,9 @@ object Main extends SimpleSwingApplication:
 //      onEDT(Window.getWindows.foreach(_.repaint()))
 //  timer.scheduleAtFixedRate(task, 0, 30) // every 30ms
 
-  override def top: Frame =
+  override def top: Frame = {
     // Open both views at startup
-    //new LocalView(manager, "p1").open()
+    playerActor ! Init(manager)
     // No launcher window, just return an empty frame (or null if allowed)
     new Frame { visible = false }
+  }

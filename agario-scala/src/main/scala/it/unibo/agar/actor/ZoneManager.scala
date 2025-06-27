@@ -2,8 +2,7 @@ package it.unibo.agar.actor
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import it.unibo.agar.model.WorldGrid
-import it.unibo.agar.model.Coord
+import it.unibo.agar.model.{Coord, WorldGrid}
 
 object ZoneManager:
   sealed trait Command

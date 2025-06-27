@@ -3,6 +3,7 @@ package it.unibo.agar
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
+import it.unibo.agar.prev.{Message, startup}
 
 object ZoneActor:
   trait Command extends Message

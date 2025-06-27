@@ -1,11 +1,7 @@
-package it.unibo.agar.controller
+package it.unibo.agar.prev.controller
 
-import it.unibo.agar.model.AIMovement
-import it.unibo.agar.model.GameInitializer
-import it.unibo.agar.model.MockGameStateManager
-import it.unibo.agar.model.World
-import it.unibo.agar.view.GlobalView
-import it.unibo.agar.view.LocalView
+import it.unibo.agar.prev.model.{AIMovement, GameInitializer, MockGameStateManager, World}
+import it.unibo.agar.prev.view.{GlobalView, LocalView}
 
 import java.awt.Window
 import java.util.Timer

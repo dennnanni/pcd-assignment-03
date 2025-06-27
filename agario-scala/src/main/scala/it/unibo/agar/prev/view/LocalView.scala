@@ -1,13 +1,13 @@
-package it.unibo.agar.view
+package it.unibo.agar.prev.view
 
-import it.unibo.agar.model.{Player, ViewWorld}
+import it.unibo.agar.prev.model.{MockGameStateManager, World}
 
 import java.awt.Graphics2D
 import scala.swing.*
 
-class LocalView(playerId: String) extends MainFrame:
-
-  var viewWorld: ViewWorld = ViewWorld.empty // Initialize with an empty world
+class LocalView(manager: MockGameStateManager, playerId: String) extends MainFrame:
+  
+  val world: World = null
 
   title = s"Agar.io - Local View ($playerId)"
   preferredSize = new Dimension(400, 400)
@@ -18,7 +18,7 @@ class LocalView(playerId: String) extends MainFrame:
     requestFocusInWindow()
 
     override def paintComponent(g: Graphics2D): Unit =
-      val world = viewWorld
+      val world = manager.getWorld
       val playerOpt = world.players.find(_.id == playerId)
       val (offsetX, offsetY) = playerOpt
         .map(p => (p.x - size.width / 2.0, p.y - size.height / 2.0))
@@ -27,21 +27,10 @@ class LocalView(playerId: String) extends MainFrame:
 
     reactions += { case e: event.MouseMoved =>
       val mousePos = e.point
-      val playerOpt = viewWorld.players.find(_.id == playerId)
+      val playerOpt = manager.getWorld.players.find(_.id == playerId)
       playerOpt.foreach: player =>
         val dx = (mousePos.x - size.width / 2) * 0.01
         val dy = (mousePos.y - size.height / 2) * 0.01
-        // manager.movePlayerDirection(playerId, dx, dy) TODO: implement player movement logic
+        manager.movePlayerDirection(playerId, dx, dy)
       repaint()
     }
-    
-  def updateWorld(newWorld: ViewWorld): Unit =
-    // Update the view world with the new state
-    this.viewWorld = newWorld // TODO: ci vuole una copia? va usato EDT?
-    repaint()
-    
-  def showPlayer(player: Player): Unit =
-    // Show a specific player in the view
-    this.viewWorld = this.viewWorld.updatePlayer(player)
-    repaint()
-    

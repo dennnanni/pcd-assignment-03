@@ -1,4 +1,4 @@
-package it.unibo.agar
+package it.unibo.agar.prev
 
 import akka.actor.typed.{ActorSystem, Behavior}
 import com.typesafe.config.ConfigFactory

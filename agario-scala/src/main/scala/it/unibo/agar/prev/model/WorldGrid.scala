@@ -1,4 +1,4 @@
-package it.unibo.agar.model
+package it.unibo.agar.prev.model
 
 class WorldGrid(val width: Double, val height: Double, val cellSize: Double) {
   val cols: Int = (width / cellSize).toInt

@@ -1,9 +1,8 @@
-package it.unibo.agar.view
+package it.unibo.agar.prev.view
 
-import it.unibo.agar.model.ViewWorld
 import it.unibo.agar.prev.model.World
-
-import java.awt.{Color, Graphics2D}
+import java.awt.Color
+import java.awt.Graphics2D
 
 object AgarViewUtils:
 
@@ -22,11 +21,11 @@ object AgarViewUtils:
     case _ => Color.gray
 
   def drawWorld(
-                 g: Graphics2D,
-                 world: ViewWorld,
-                 offsetX: Double = 0,
-                 offsetY: Double = 0
-               ): Unit =
+      g: Graphics2D,
+      world: World,
+      offsetX: Double = 0,
+      offsetY: Double = 0
+  ): Unit =
     def toScreenCenter(x: Double, y: Double, radius: Int): (Int, Int) =
       ((x - offsetX - radius).toInt, (y - offsetY - radius).toInt)
 
