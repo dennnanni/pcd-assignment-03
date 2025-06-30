@@ -2,7 +2,7 @@ package it.unibo.agar.actor
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import it.unibo.agar.model.{Coord, Food, LocalGameStateManager, Player}
+import it.unibo.agar.model.{Coord, Entity, Food, LocalGameStateManager, Player}
 import it.unibo.agar.view.LocalView
 
 import scala.concurrent.duration.DurationInt
@@ -15,6 +15,7 @@ object PlayerActor:
   final case class Init(width: Double, height: Double, zones: Map[Coord, ActorRef[ZoneActor.Command]]) extends Command
   final case class Tick() extends Command
   final case class UpdateWorld(zone: Coord, players: Seq[Player], food: Seq[Food]) extends Command
+  final case class Grow(entities: Seq[Food]) extends Command
 
   def apply(playerId: String): Behavior[Command] =
     Behaviors.withTimers { timers =>
@@ -43,7 +44,7 @@ class PlayerEntity(
           playerId,
           Random.between(0, width),
           Random.between(0, height),
-          100.0
+          120.0
         ),
         width,
         height,
@@ -65,7 +66,7 @@ class PlayerEntity(
   private def moving: Behavior[Command] = Behaviors.receiveMessage {
     case UpdateWorld(zone, players, food) =>
       onEDT {
-        stateManager.updateWorld(players, food)
+        stateManager.updateWorld(players.filterNot(p => p.id == playerId), zone, food)
       }
       Behaviors.same
     case Tick() =>
@@ -83,9 +84,21 @@ class PlayerEntity(
             context.log.warn(s"$playerId could not find zone at ${c._1}, ${c._2}")
         }
       }
+
       onEDT {
         stateManager.tick()
+      }
+      currentZones.foreach { case (_, zoneActor) =>
+        zoneActor ! ZoneActor.MovePlayer(stateManager.getPlayer)
+      }
+      onEDT {
         view.repaint()
-      } // TODO: non siamo sicuri
+      }
+      Behaviors.same
+    case Grow(entities) =>
+      val mass = entities.foldLeft(0.0)((acc, food) => acc + food.mass)
+      onEDT {
+          stateManager.player = stateManager.player.grow(mass)
+      }
       Behaviors.same
   }

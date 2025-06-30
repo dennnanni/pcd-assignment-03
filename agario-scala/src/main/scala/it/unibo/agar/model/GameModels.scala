@@ -18,6 +18,9 @@ case class Player(id: String, x: Double, y: Double, mass: Double) extends Entity
   def grow(entity: Entity): Player =
     copy(mass = mass + entity.mass)
 
+  def grow(massToAdd: Double): Player =
+    copy(mass = mass + massToAdd)
+
   def computeSightLimit(width: Double, height: Double, sightRadius: Double = 200.0): Seq[(Double, Double)] =
     val topLeft = (
       math.max(0, x - sightRadius),
@@ -41,7 +44,7 @@ case class World(
     width: Double,
     height: Double,
     var players: Seq[Player],
-    var foods: Seq[Food]
+    var foods: Map[Coord, Seq[Food]]
 ):
 
   private val grid = new WorldGrid(width, height, 400) // TODO: make it configurable
@@ -60,11 +63,11 @@ case class World(
   def removePlayers(ids: Seq[Player]): World =
     copy(players = players.filterNot(p => ids.map(_.id).contains(p.id)))
 
-  def removeFoods(foodsToRemove: Seq[Food]): World =
-    copy(foods = foods.filterNot(food => foodsToRemove.map(_.id).contains(food.id)))
+//  def removeFoods(foodsToRemove: Seq[Food]): World =
+//    copy(foods = foods.filterNot(food => foodsToRemove.map(_.id).contains(food.id)))
 
-  def updateFoods(newFoods: Seq[Food]): World =
-    copy(foods = newFoods)
+  def updateFoods(zone: Coord, newFoods: Seq[Food]): World =
+    copy(foods = foods.updated(zone, newFoods))
 
   def updatePlayers(newPlayers: Seq[Player]): World =
     copy(players = newPlayers)
@@ -72,7 +75,7 @@ case class World(
 
 object World:
   def empty: World =
-    World(1000, 1000, Seq.empty, Seq.empty)
+    World(1000, 1000, Seq.empty, Map.empty)
 
 class WorldGrid(val width: Double, val height: Double, val cellSize: Double) {
   val cols: Int = math.ceil(width / cellSize).toInt

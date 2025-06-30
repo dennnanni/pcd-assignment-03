@@ -11,7 +11,7 @@ object AIMovement:
     * @return
     */
   def nearestFood(player: String, world: World): Option[Food] =
-    world.foods
+    world.foods.flatten(f => f._2).toList
       .sortBy(food => world.playerById(player).map(p => p.distanceTo(food)).getOrElse(Double.MaxValue))
       .headOption
 

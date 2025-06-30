@@ -32,8 +32,8 @@ class MockGameStateManager(
     player.copy(x = newX, y = newY)
 
   private def updateWorldAfterMovement(player: Player): World =
-    val foodEaten = world.foods.filter(food => EatingManager.canEatFood(player, food))
-    val playerEatsFood = foodEaten.foldLeft(player)((p, food) => p.grow(food))
+    val foodEaten = world.foods.flatten(f => f._2).filter(food => EatingManager.canEatFood(player, food))
+    val playerEatsFood = foodEaten.foldLeft(player)((p, food) => null)//p.grow(food))
     val playersEaten = world
       .playersExcludingSelf(player)
       .filter(player => EatingManager.canEatPlayer(playerEatsFood, player))
@@ -41,7 +41,7 @@ class MockGameStateManager(
     world
       .updatePlayer(playerEatPlayers)
       .removePlayers(playersEaten)
-      .removeFoods(foodEaten)
+      //.removeFoods(foodEaten)
 
 
 class LocalGameStateManager(
@@ -57,9 +57,10 @@ class LocalGameStateManager(
   def getWorld: World = world
   def getPlayer: Player = player
 
-  def updateWorld(players: Seq[Player], foods: Seq[Food]): Unit =
+  def updateWorld(players: Seq[Player], zone: Coord, foods: Seq[Food]): Unit =
     world.players = world.players ++ players.filterNot { world.players.contains(_) }
-    world.foods = world.foods ++ foods.filterNot { world.foods.contains(_) }
+    world.foods = world.foods.updated(zone, foods)
+  
 
   // Move a player in a given direction (dx, dy)
   def movePlayerDirection(dx: Double, dy: Double, playerId: String = "default"): Unit =

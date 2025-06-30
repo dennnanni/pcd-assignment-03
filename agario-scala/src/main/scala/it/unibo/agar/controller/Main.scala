@@ -3,7 +3,7 @@ package it.unibo.agar.controller
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.ActorSystem
 import it.unibo.agar.actor.{PlayerActor, ZoneActor}
-import it.unibo.agar.model.{Coord, WorldGrid}
+import it.unibo.agar.model.{Coord, Player, WorldGrid}
 
 import java.util.{Timer, TimerTask}
 import scala.swing.*
@@ -41,7 +41,7 @@ object Main extends SimpleSwingApplication:
     PlayerActor("p1"),
     "Player1"
   )
-
+  
   override def top: Frame = {
     // Open both views at startup
     playerActor ! PlayerActor.Init(width, height, allZones)

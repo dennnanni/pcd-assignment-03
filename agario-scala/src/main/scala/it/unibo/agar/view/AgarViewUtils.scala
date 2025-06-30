@@ -54,7 +54,7 @@ object AgarViewUtils:
 
     // Draw foods
     g.setColor(Color.green)
-    world.foods.foreach: food =>
+    world.foods.flatten(f => f._2).foreach: food =>
       val radius = food.radius.toInt
       val diameter = radius * 2
       val (foodX, foodY) = toScreenCenter(food.x, food.y, radius)
