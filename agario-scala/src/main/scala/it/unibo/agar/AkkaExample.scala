@@ -1,6 +1,7 @@
-package it.unibo.agar.prev
+package it.unibo.agar
 
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.ActorRef
+import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
 
 object PingPong:

@@ -14,37 +14,83 @@ sealed trait Entity:
     math.hypot(dx, dy)
 
 case class Player(id: String, x: Double, y: Double, mass: Double) extends Entity:
+
   def grow(entity: Entity): Player =
     copy(mass = mass + entity.mass)
 
-  def computeSightLimit(width: Double, height: Double): Seq[Position] =
-    val sightRadius = 200.0 // TODO: make this configurable
+  def computeSightLimit(width: Double, height: Double, sightRadius: Double = 200.0): Seq[(Double, Double)] =
+    val topLeft = (
+      math.max(0, x - sightRadius),
+      math.max(0, y - sightRadius)
+    )
+    val bottomRight = (
+      math.min(width, x + sightRadius),
+      math.min(height, y + sightRadius)
+    )
+
     Seq(
-      Position(x - sightRadius, y - sightRadius),
-      Position(x + sightRadius, y - sightRadius),
-      Position(x - sightRadius, y + sightRadius),
-      Position(x + sightRadius, y + sightRadius)
+      topLeft,
+      (bottomRight._1, topLeft._2),
+      (topLeft._1, bottomRight._2),
+      bottomRight
     )
 
 case class Food(id: String, x: Double, y: Double, mass: Double = 100.0) extends Entity
 
-case class ViewWorld(
-    players: Seq[Player],
-    foods: Seq[Food]
+case class World(
+    width: Double,
+    height: Double,
+    var players: Seq[Player],
+    var foods: Seq[Food]
 ):
+
+  private val grid = new WorldGrid(width, height, 400) // TODO: make it configurable
+
+  def getGrid: WorldGrid = grid
+
   def playersExcludingSelf(player: Player): Seq[Player] =
     players.filterNot(_.id == player.id)
 
-  def updatePlayer(player: Player): ViewWorld =
-    val updatedPlayers = players.filterNot(_.id == player.id) :+ player
-    copy(players = updatedPlayers)
+  def playerById(id: String): Option[Player] =
+    players.find(_.id == id)
 
-  def appendPlayers(newPlayers: Seq[Player]): ViewWorld =
-    copy(players = players ++ newPlayers)
+  def updatePlayer(player: Player): World =
+    copy(players = players.map(p => if (p.id == player.id) player else p))
 
-  def appendFood(newFood: Seq[Food]): ViewWorld =
-    copy(foods = foods ++ newFood)
+  def removePlayers(ids: Seq[Player]): World =
+    copy(players = players.filterNot(p => ids.map(_.id).contains(p.id)))
 
-object ViewWorld:
-  def empty: ViewWorld =
-    ViewWorld(Seq.empty, Seq.empty)
+  def removeFoods(foodsToRemove: Seq[Food]): World =
+    copy(foods = foods.filterNot(food => foodsToRemove.map(_.id).contains(food.id)))
+
+  def updateFoods(newFoods: Seq[Food]): World =
+    copy(foods = newFoods)
+
+  def updatePlayers(newPlayers: Seq[Player]): World =
+    copy(players = newPlayers)
+
+
+object World:
+  def empty: World =
+    World(1000, 1000, Seq.empty, Seq.empty)
+
+class WorldGrid(val width: Double, val height: Double, val cellSize: Double) {
+  val cols: Int = math.ceil(width / cellSize).toInt
+  val rows: Int = math.ceil(height / cellSize).toInt
+
+  def allCoords: Seq[Coord] =
+    for {
+      x <- 0 until cols
+      y <- 0 until rows
+    } yield Coord(x, y)
+
+  def boundsOf(coord: Coord): (Double, Double, Double, Double) =
+    val minW = coord.x * cellSize
+    val maxW = (minW + cellSize).min(width)
+    val minH = coord.y * cellSize
+    val maxH = (minH + cellSize).min(height)
+    (minW, maxW, minH, maxH)
+
+  def coordFor(x: Double, y: Double): Coord =
+    Coord((x / cellSize).toInt, (y / cellSize).toInt)
+}

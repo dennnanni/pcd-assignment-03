@@ -1,4 +1,4 @@
-package it.unibo.agar.prev.model
+package it.unibo.agar.model
 
 /** Object responsible for AI movement logic, separate from the game state management */
 object AIMovement:
@@ -32,5 +32,5 @@ object AIMovement:
         if (distance > 0)
           val normalizedDx = dx / distance
           val normalizedDy = dy / distance
-          gameManager.movePlayerDirection(name, normalizedDx, normalizedDy)
+          gameManager.movePlayerDirection(normalizedDx, normalizedDy, name)
       case _ => // Do nothing if AI or food doesn't exist

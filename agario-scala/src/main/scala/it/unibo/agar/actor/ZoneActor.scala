@@ -1,23 +1,19 @@
 package it.unibo.agar.actor
 
-
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, Behavior}
 import it.unibo.agar.model.{Coord, Food, Player}
 
-import scala.util.Random
-
-
 object ZoneActor:
-  // Messaggi
   sealed trait Command
-  final case class EnterZone(playerId: Player, player: ActorRef[PlayerActor.Command]) extends Command
+  final case class EnterZone(player: Player, playerRef: ActorRef[PlayerActor.Command]) extends Command
   final case class LeaveZone(playerId: String) extends Command
-  final case class AddFood() extends Command
+  final case class AddFood(x: Double, y: Double) extends Command
 
-  def apply(minW: Double, maxW: Double, minH: Double, maxH: Double, coord: Coord): Behavior[Command] = Behaviors.setup { context =>
-    new Zone(context, minW, maxW, minH, maxH, coord).active
-  }
+  def apply(minW: Double, maxW: Double, minH: Double, maxH: Double, coord: Coord): Behavior[Command] =
+    Behaviors.setup { context =>
+      new Zone(context, minW, maxW, minH, maxH, coord).active
+    }
 
 class Zone(
     ctx: ActorContext[ZoneActor.Command],
@@ -27,27 +23,28 @@ class Zone(
     maxH: Double,
     coord: Coord
 ):
+
   import ZoneActor.*
 
-  var players: Seq[(Player, ActorRef[PlayerActor.Command])] = Seq.empty // Lista dei giocatori presenti nella zona
-  var foods: Seq[Food] = Seq.empty // Lista del cibo presente nella zona
+  private var players: Seq[(Player, ActorRef[PlayerActor.Command])] = Seq.empty // List of players in the zone
+  private var foods: Seq[Food] = Seq.empty // List of food in the zone
 
   val active: Behavior[Command] =
-    Behaviors.receiveMessage:
+    Behaviors.receiveMessage {
       case EnterZone(player, playerRef) =>
-        ctx.log.info(s"Player ${player.id} entered zone with bounds ($minW, $maxW, $minH, $maxH)")
-        players = players.appended(player, playerRef)
+        players ++= Seq((player, playerRef))
         Behaviors.same
       case LeaveZone(playerId) =>
-        ctx.log.info(s"Player $playerId left zone with bounds ($minW, $maxW, $minH, $maxH)")
         players = players.filterNot(_._1.id == playerId)
         Behaviors.same
-      case AddFood() =>
-        val food = Food(
-          id = s"food-${Random.alphanumeric.take(8).mkString}",
-          x = Random.between(minW, maxW),
-          y = Random.between(minH, maxH)
-        )
-        ctx.log.info(s"Adding food ${food.id} to zone with bounds ($minW, $maxW, $minH, $maxH)")
-        foods = foods.appended(food)
+      case AddFood(x, y) =>
+        foods = foods ++ Seq(Food(
+          id = s"food-${java.util.UUID.randomUUID()}",
+          x = x,
+          y = y
+        ))
+        players.foreach { case (player, playerRef) =>
+          playerRef ! PlayerActor.UpdateWorld(coord, players.map(_._1), foods)
+        }
         Behaviors.same
+    }
