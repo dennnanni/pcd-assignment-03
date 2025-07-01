@@ -15,6 +15,23 @@ def startup[X](file: String = "base-cluster", port: Int)(root: => Behavior[X]): 
   // Create an Akka system
   ActorSystem(root, file, config)
 
+def startupWithSeeds[X](file: String = "base-cluster", port: Int, seeds: List[Int] = Nil)
+              (root: => Behavior[X]): ActorSystem[X] =
+  val seedsStr = seeds.map(p => s""""akka://agario@127.0.0.1:$p"""").mkString(", ")
+  val configStr =
+    s"""
+       |akka.remote.artery.canonical.port = $port
+       |akka.cluster.seed-nodes = [ $seedsStr ]
+       |""".stripMargin
+
+  val config = ConfigFactory
+    .parseString(configStr)
+    .withFallback(ConfigFactory.load(file))
+
+  ActorSystem(root, file, config)
+
+
+
 def startupWithRole[X](role: String, port: Int)(root: => Behavior[X]): ActorSystem[X] =
   val config = ConfigFactory
     .parseString(s"""

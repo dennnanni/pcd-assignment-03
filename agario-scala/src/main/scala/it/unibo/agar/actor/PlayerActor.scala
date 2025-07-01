@@ -2,8 +2,10 @@ package it.unibo.agar.actor
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityRef}
 import it.unibo.agar.model.{Coord, Entity, Food, LocalGameStateManager, Player}
 import it.unibo.agar.view.LocalView
+import it.unibo.agar.Message
 
 import javax.swing.SwingUtilities
 import scala.concurrent.duration.DurationInt
@@ -12,7 +14,7 @@ import scala.util.Random
 
 
 object PlayerActor:
-  sealed trait Command
+  sealed trait Command extends Message
   final case class Init(width: Double, height: Double, zones: Map[Coord, ActorRef[ZoneActor.Command]]) extends Command
   final case class Tick() extends Command
   final case class UpdateWorld(zone: Coord, players: Seq[Player], food: Seq[Food]) extends Command
@@ -34,7 +36,7 @@ class PlayerEntity(
   import PlayerActor.*
 
   private var stateManager = LocalGameStateManager.empty // Initial position and mass
-  private var currentZones: Map[Coord, ActorRef[ZoneActor.Command]] = Map.empty
+  private var currentZones: Map[Coord, EntityRef[ZoneActor.Command]] = Map.empty
   private var allZones: Map[Coord, ActorRef[ZoneActor.Command]] = Map.empty
   private var view = LocalView.empty
 
@@ -76,13 +78,10 @@ class PlayerEntity(
       }
       currentZones = currentZones.filter { case (c, _) => coord.contains(c) }
       coord.diff(currentZones.keySet).foreach { c =>
-        allZones.get(c) match {
-          case Some(zoneActor) =>
-            zoneActor ! ZoneActor.EnterZone(stateManager.getPlayer, context.self)
-            currentZones += (c -> zoneActor)
-          case None =>
-            context.log.warn(s"$playerId could not find zone at ${c._1}, ${c._2}")
-        }
+        val zoneActor = ClusterSharding(context.system)
+          .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
+        zoneActor ! ZoneActor.EnterZone(stateManager.getPlayer, context.self)
+        currentZones += (c -> zoneActor)
       }
 
       stateManager.tick()
@@ -95,13 +94,12 @@ class PlayerEntity(
       }
       Behaviors.same
     case Grow(entities) =>
-      val mass = entities.foldLeft(0.0)((acc, food) => acc + food.mass)
+      val mass = entities.foldLeft(0.0)((acc, entity) => acc + entity.mass)
       SwingUtilities.invokeLater(() =>
         stateManager.player = stateManager.player.grow(mass)
       )
       Behaviors.same
     case RemovePlayer(playerId) =>
-        context.log.info(s"Player $playerId has been removed from the game.")
       SwingUtilities.invokeLater(() =>
         view.showGameOver(s"Player $playerId has been removed from the game.")
       )

@@ -11,46 +11,46 @@ import scala.util.Random
 
 object Main extends SimpleSwingApplication:
 
-  private val width = 1000
-  private val height = 1000
-
-  private val system = ActorSystem(Behaviors.empty, "AgarGameSystem")
-
-  private val grid = WorldGrid(width, height, 400)
-  private val allZones = grid.allCoords.map(
-    coord =>
-      val (minW, maxW, minH, maxH) = grid.boundsOf(coord)
-      val zoneRef = system.systemActorOf(
-        ZoneActor(minW, maxW, minH, maxH, coord),
-        s"Zone-${coord.x}-${coord.y}"
-      )
-      coord -> zoneRef
-  ).toMap
-
-  private val timer = new Timer()
-  private val task: TimerTask = new TimerTask:
-    override def run(): Unit =
-      val (x, y): (Double, Double) = (Random.between(0, width).toDouble, Random.between(0, height).toDouble)
-      val coord = grid.coordFor(x, y)
-      allZones.get(coord).foreach { zoneRef =>
-        zoneRef ! ZoneActor.AddFood(x, y)
-      }
-  timer.scheduleAtFixedRate(task, 0, 500) // every 30ms
-
-  private val playerActor = system.systemActorOf(
-    PlayerActor("p1"),
-    "Player1"
-  )
-
-  private val playerActor2 = system.systemActorOf(
-    PlayerActor("p2"),
-    "Player2"
-  )
-  
+//  private val width = 1000
+//  private val height = 1000
+//
+//  private val system = ActorSystem(Behaviors.empty, "AgarGameSystem")
+//
+//  private val grid = WorldGrid(width, height, 400)
+//  private val allZones = grid.allCoords.map(
+//    coord =>
+//      val (minW, maxW, minH, maxH) = grid.boundsOf(coord)
+//      val zoneRef = system.systemActorOf(
+//        ZoneActor(minW, maxW, minH, maxH, coord),
+//        s"Zone-${coord.x}-${coord.y}"
+//      )
+//      coord -> zoneRef
+//  ).toMap
+//
+//  private val timer = new Timer()
+//  private val task: TimerTask = new TimerTask:
+//    override def run(): Unit =
+//      val (x, y): (Double, Double) = (Random.between(0, width).toDouble, Random.between(0, height).toDouble)
+//      val coord = grid.coordFor(x, y)
+//      allZones.get(coord).foreach { zoneRef =>
+//        zoneRef ! ZoneActor.AddFood(x, y)
+//      }
+//  timer.scheduleAtFixedRate(task, 0, 500) // every 30ms
+//
+//  private val playerActor = system.systemActorOf(
+//    PlayerActor("p1"),
+//    "Player1"
+//  )
+//
+//  private val playerActor2 = system.systemActorOf(
+//    PlayerActor("p2"),
+//    "Player2"
+//  )
+//  
   override def top: Frame = {
     // Open both views at startup
-    playerActor2 ! PlayerActor.Init(width, height, allZones)
-    playerActor ! PlayerActor.Init(width, height, allZones)
+//    playerActor2 ! PlayerActor.Init(width, height, allZones)
+//    playerActor ! PlayerActor.Init(width, height, allZones)
     // No launcher window, just return an empty frame (or null if allowed)
     new Frame { visible = false }
   }
