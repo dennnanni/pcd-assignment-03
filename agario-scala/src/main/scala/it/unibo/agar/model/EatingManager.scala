@@ -11,7 +11,6 @@ object EatingManager:
   // Determines if a player can eat a food
   def canEatFood(player: Player, food: Food): Boolean = 
     collides(player, food) && player.mass > food.mass
-  
 
   // Determines if a player can eat another player
   def canEatPlayer(player: Player, other: Player): Boolean =

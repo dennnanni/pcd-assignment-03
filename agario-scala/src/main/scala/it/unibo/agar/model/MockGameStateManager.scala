@@ -53,14 +53,15 @@ class LocalGameStateManager(
 
   private var direction: (Double, Double) = (0,0)
   private var world: World = World.empty
+  private var worldCopy: World = World.empty
 
   def getWorld: World = world
+  def getWorldCopy: World = worldCopy
   def getPlayer: Player = player
 
   def updateWorld(players: Seq[Player], zone: Coord, foods: Seq[Food]): Unit =
-    world.players = world.players ++ players.filterNot { world.players.contains(_) }
+    world.players = world.players.updated(zone, players.filterNot(p => p.id == player.id))
     world.foods = world.foods.updated(zone, foods)
-  
 
   // Move a player in a given direction (dx, dy)
   def movePlayerDirection(dx: Double, dy: Double, playerId: String = "default"): Unit =
@@ -80,6 +81,10 @@ class LocalGameStateManager(
 
   def getCoord(x: Double, y: Double): Coord =
     world.getGrid.coordFor(x, y)
+
+  def copyWorld: World =
+    worldCopy = world.copy(players = world.players, foods = world.foods)
+    worldCopy
 
 
 object LocalGameStateManager:

@@ -43,25 +43,32 @@ case class Food(id: String, x: Double, y: Double, mass: Double = 100.0) extends 
 case class World(
     width: Double,
     height: Double,
-    var players: Seq[Player],
+    var players: Map[Coord, Seq[Player]],
     var foods: Map[Coord, Seq[Food]]
 ):
 
-  private val grid = new WorldGrid(width, height, 400) // TODO: make it configurable
+  private val grid = new WorldGrid(width, height, 400)
 
   def getGrid: WorldGrid = grid
 
   def playersExcludingSelf(player: Player): Seq[Player] =
-    players.filterNot(_.id == player.id)
+    players.flatten(p => p._2).filterNot(_.id == player.id).toSeq
 
   def playerById(id: String): Option[Player] =
-    players.find(_.id == id)
+    players.flatten(p => p._2).find(_.id == id)
 
-  def updatePlayer(player: Player): World =
-    copy(players = players.map(p => if (p.id == player.id) player else p))
+  def updatePlayer(player: Player): World = {
+    copy(players = players.map {
+      case (coord, playerList) =>
+        coord -> playerList.map(p => if (p.id == player.id) player else p)
+    })
+  }
 
   def removePlayers(ids: Seq[Player]): World =
-    copy(players = players.filterNot(p => ids.map(_.id).contains(p.id)))
+    copy(players = players.map {
+      case (coord, playerList) =>
+        coord -> playerList.filterNot(p => ids.map(_.id).contains(p.id))
+    })
 
 //  def removeFoods(foodsToRemove: Seq[Food]): World =
 //    copy(foods = foods.filterNot(food => foodsToRemove.map(_.id).contains(food.id)))
@@ -69,13 +76,13 @@ case class World(
   def updateFoods(zone: Coord, newFoods: Seq[Food]): World =
     copy(foods = foods.updated(zone, newFoods))
 
-  def updatePlayers(newPlayers: Seq[Player]): World =
-    copy(players = newPlayers)
+  def updatePlayers(zone: Coord, newPlayers: Seq[Player]): World =
+    copy(players = players.updated(zone, newPlayers))
 
 
 object World:
   def empty: World =
-    World(1000, 1000, Seq.empty, Map.empty)
+    World(1000, 1000, Map.empty, Map.empty)
 
 class WorldGrid(val width: Double, val height: Double, val cellSize: Double) {
   val cols: Int = math.ceil(width / cellSize).toInt

@@ -5,6 +5,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import it.unibo.agar.model.{Coord, Entity, Food, LocalGameStateManager, Player}
 import it.unibo.agar.view.LocalView
 
+import javax.swing.SwingUtilities
 import scala.concurrent.duration.DurationInt
 import scala.swing.Swing.onEDT
 import scala.util.Random
@@ -15,7 +16,8 @@ object PlayerActor:
   final case class Init(width: Double, height: Double, zones: Map[Coord, ActorRef[ZoneActor.Command]]) extends Command
   final case class Tick() extends Command
   final case class UpdateWorld(zone: Coord, players: Seq[Player], food: Seq[Food]) extends Command
-  final case class Grow(entities: Seq[Food]) extends Command
+  final case class Grow(entities: Seq[Entity]) extends Command
+  final case class RemovePlayer(playerId: String) extends Command
 
   def apply(playerId: String): Behavior[Command] =
     Behaviors.withTimers { timers =>
@@ -65,9 +67,7 @@ class PlayerEntity(
 
   private def moving: Behavior[Command] = Behaviors.receiveMessage {
     case UpdateWorld(zone, players, food) =>
-      onEDT {
-        stateManager.updateWorld(players.filterNot(p => p.id == playerId), zone, food)
-      }
+      stateManager.updateWorld(players.filterNot(p => p.id == playerId), zone, food)
       Behaviors.same
     case Tick() =>
       val coord = stateManager.getPlayerSightLimit.map(p => stateManager.getCoord(p._1, p._2)).toSet
@@ -85,20 +85,25 @@ class PlayerEntity(
         }
       }
 
-      onEDT {
-        stateManager.tick()
-      }
+      stateManager.tick()
       currentZones.foreach { case (_, zoneActor) =>
         zoneActor ! ZoneActor.MovePlayer(stateManager.getPlayer)
       }
       onEDT {
+        stateManager.copyWorld
         view.repaint()
       }
       Behaviors.same
     case Grow(entities) =>
       val mass = entities.foldLeft(0.0)((acc, food) => acc + food.mass)
-      onEDT {
-          stateManager.player = stateManager.player.grow(mass)
-      }
+      SwingUtilities.invokeLater(() =>
+        stateManager.player = stateManager.player.grow(mass)
+      )
       Behaviors.same
+    case RemovePlayer(playerId) =>
+        context.log.info(s"Player $playerId has been removed from the game.")
+      SwingUtilities.invokeLater(() =>
+        view.showGameOver(s"Player $playerId has been removed from the game.")
+      )
+      Behaviors.stopped
   }

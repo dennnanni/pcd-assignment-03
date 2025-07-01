@@ -61,7 +61,7 @@ object AgarViewUtils:
       g.fillOval(foodX, foodY, diameter, diameter)
 
     // Draw players
-    world.players.foreach: player =>
+    world.players.flatten(p => p._2).foreach: player =>
       val radius = player.radius.toInt
       val diameter = radius * 2
       val (borderX, borderY) = toScreenCenter(player.x, player.y, radius)

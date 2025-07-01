@@ -41,9 +41,15 @@ object Main extends SimpleSwingApplication:
     PlayerActor("p1"),
     "Player1"
   )
+
+  private val playerActor2 = system.systemActorOf(
+    PlayerActor("p2"),
+    "Player2"
+  )
   
   override def top: Frame = {
     // Open both views at startup
+    playerActor2 ! PlayerActor.Init(width, height, allZones)
     playerActor ! PlayerActor.Init(width, height, allZones)
     // No launcher window, just return an empty frame (or null if allowed)
     new Frame { visible = false }

@@ -1,6 +1,6 @@
 package it.unibo.agar.view
 
-import it.unibo.agar.model.{LocalGameStateManager, MockGameStateManager, World}
+import it.unibo.agar.model.{Coord, LocalGameStateManager, MockGameStateManager, World}
 
 import java.awt.Graphics2D
 import scala.swing.*
@@ -22,11 +22,14 @@ extends MainFrame:
       val (offsetX, offsetY) = Some(manager.player)
         .map(p => (p.x - size.width / 2.0, p.y - size.height / 2.0))
         .getOrElse((0.0, 0.0))
+
+      val key = Coord(-1, -1) // TODO: fix this
+      val seq = manager.getWorldCopy.players.getOrElse(key, Seq.empty)
       val drawWorld = World(
         width = manager.width,
         height = manager.height,
-        players = Seq(manager.player) ++ manager.getWorld.players,
-        foods = manager.getWorld.foods
+        players = manager.getWorldCopy.players.updated(key, seq ++ Seq(manager.player)), // TODO: fix this
+        foods = manager.getWorldCopy.foods
       )
       AgarViewUtils.drawWorld(g, drawWorld, offsetX, offsetY)
 
@@ -37,7 +40,14 @@ extends MainFrame:
       manager.movePlayerDirection(dx, dy)
       repaint()
     }
-
+  
+  def showGameOver(message: String): Unit =
+    Dialog.showMessage(
+      contents.head,
+      message,
+      title = "Game Over",
+      Dialog.Message.Info
+    )
 
 object LocalView:
   def empty: LocalView =

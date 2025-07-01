@@ -2,7 +2,7 @@ package it.unibo.agar.actor
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import it.unibo.agar.model.{Coord, Food, Player, EatingManager}
+import it.unibo.agar.model.{Coord, EatingManager, Entity, Food, Player}
 
 object ZoneActor:
   sealed trait Command
@@ -35,6 +35,7 @@ class Zone(
   val active: Behavior[Command] =
     Behaviors.receiveMessage {
       case AddPlayer(player) =>
+        ctx.log.info(s"Player ${player.id} added to zone at $coord")
         players = players ++ Seq((player, null))
         Behaviors.same
       case EnterZone(player, playerRef) =>
@@ -62,10 +63,17 @@ class Zone(
               case other => other
             }
 
-            val foodEaten = foods.filter(food => EatingManager.canEatFood(player, food))
-            foods = foods.filterNot(food => foodEaten.map(_.id).contains(food.id))
+            val (playersEaten, foodEaten) = getEatenEntities(player)
+            val entitiesEaten = foodEaten ++ playersEaten.map(_._1)
+            if playersEaten.nonEmpty then
+              players = players.filterNot(p => playersEaten.map(_._1.id).contains(p._1.id))
+              playersEaten.foreach { case (p, ref) => if ref != null then
+                ref ! PlayerActor.RemovePlayer(p.id)
+              }
             if foodEaten.nonEmpty then
-              playerRef ! PlayerActor.Grow(foodEaten)
+              foods = foods.filterNot(food => foodEaten.map(_.id).contains(food.id))
+            if entitiesEaten.nonEmpty then
+              playerRef ! PlayerActor.Grow(entitiesEaten)
 
             players.foreach { case (_, ref) => if ref != null then {
               ref ! PlayerActor.UpdateWorld(coord, players.map(_._1), foods)
@@ -75,3 +83,10 @@ class Zone(
             // Player not found in this zone, ignore movement
         Behaviors.same
     }
+
+  private def getEatenEntities(player: Player): (Seq[(Player, ActorRef[PlayerActor.Command])], Seq[Food]) =
+    val foodEaten = foods.filter(food => EatingManager.canEatFood(player, food))
+    val playersEaten = players
+      .filterNot(_._1.id == player.id)
+      .filter(p => EatingManager.canEatPlayer(player, p._1))
+    (playersEaten, foodEaten)
