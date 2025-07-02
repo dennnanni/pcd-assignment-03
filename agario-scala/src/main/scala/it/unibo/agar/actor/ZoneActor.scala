@@ -65,7 +65,6 @@ object ZoneActor:
 
   def apply(): Behavior[Command] =
     Behaviors.setup { context =>
-      println("PERSISTENCE ID: " + context.self.path.name)
       val zone = new Zone()
       EventSourcedBehavior[Command, ZoneEvent, ZoneState](
         persistenceId = PersistenceId.ofUniqueId(context.self.path.name),

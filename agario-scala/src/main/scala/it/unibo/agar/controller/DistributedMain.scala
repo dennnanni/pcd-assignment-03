@@ -3,6 +3,8 @@ package it.unibo.agar.controller
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
+import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 import it.unibo.agar.actor.{PlayerActor, ZoneActor, ZoneConfig}
 import it.unibo.agar.model.{Player, WorldGrid}
 import it.unibo.agar.startup
@@ -80,3 +82,20 @@ object ZonesMain:
     }
 
     refs.head._2 ! ZoneActor.AddFood(100, 100)
+
+
+object TestPersistence:
+  def main(args: Array[String]): Unit =
+    val behavior = EventSourcedBehavior[String, String, List[String]](
+      persistenceId = PersistenceId.ofUniqueId("pippo"),
+      emptyState = List.empty,
+      commandHandler = (state, cmd) => Effect.persist(cmd),
+      eventHandler = (state, evt) => state :+ evt
+    )
+
+    val ref = startup("agario", 25251) {
+      behavior
+    }
+
+    ref ! "ciao"
+    ref ! "mondo"
