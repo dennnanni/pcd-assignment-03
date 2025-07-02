@@ -46,8 +46,8 @@ class PlayerEntity(
       stateManager = LocalGameStateManager(
         Player(
           playerId,
-          Random.between(0, width),
-          Random.between(0, height),
+          500,//Random.between(0, width),
+          500,//Random.between(0, height),
           120.0
         ),
         width,
@@ -80,13 +80,14 @@ class PlayerEntity(
       coord.diff(currentZones.keySet).foreach { c =>
         val zoneActor = ClusterSharding(context.system)
           .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
+        
         zoneActor ! ZoneActor.EnterZone(stateManager.getPlayer, context.self)
         currentZones += (c -> zoneActor)
       }
 
       stateManager.tick()
       currentZones.foreach { case (_, zoneActor) =>
-        zoneActor ! ZoneActor.MovePlayer(stateManager.getPlayer)
+        zoneActor ! ZoneActor.MovePlayer(stateManager.getPlayer, context.self)
       }
       onEDT {
         stateManager.copyWorld
