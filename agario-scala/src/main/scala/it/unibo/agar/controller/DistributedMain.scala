@@ -82,20 +82,3 @@ object ZonesMain:
     }
 
     refs.head._2 ! ZoneActor.AddFood(100, 100)
-
-
-object TestPersistence:
-  def main(args: Array[String]): Unit =
-    val behavior = EventSourcedBehavior[String, String, List[String]](
-      persistenceId = PersistenceId.ofUniqueId("pippo"),
-      emptyState = List.empty,
-      commandHandler = (state, cmd) => Effect.persist(cmd),
-      eventHandler = (state, evt) => state :+ evt
-    )
-
-    val ref = startup("agario", 25251) {
-      behavior
-    }
-
-    ref ! "ciao"
-    ref ! "mondo"
