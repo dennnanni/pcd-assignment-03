@@ -27,8 +27,8 @@ class DistributedAgarIo(playerId: String) extends SimpleSwingApplication:
   Thread.sleep(5000)
 
   val player: ActorRef[PlayerActor.Command] = playerSystem.systemActorOf(
-    PlayerActor("player1"),
-    "player1"
+    PlayerActor(playerId),
+    playerId
   )
 
   override def top: Frame = {
@@ -68,7 +68,6 @@ object ZonesMain:
     var i: Int = 0
     val refs = grid.allCoords.map { coord =>
       val (minW, maxW, minH, maxH) = grid.boundsOf(coord)
-      println(s"zone-${coord.x}-${coord.y}")
       val zoneRef = ClusterSharding(actorSystems(i))
         .entityRefFor(ZoneActor.TypeKey, s"zone-${coord.x}-${coord.y}")
       i = (i + 1) % actorSystems.size
@@ -77,7 +76,7 @@ object ZonesMain:
 
     refs.foreach { (c, ref) =>
       val (minW, maxW, minH, maxH) = grid.boundsOf(c)
-      ref ! ZoneActor.Init(ZoneConfig(/*minW, maxW, minH, maxH,*/ c))
+      ref ! ZoneActor.Init(ZoneConfig(minW, maxW, minH, maxH, c))
     }
 
     refs.head._2 ! ZoneActor.AddFood(100, 100)

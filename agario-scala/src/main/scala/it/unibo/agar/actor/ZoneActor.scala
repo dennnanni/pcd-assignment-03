@@ -45,10 +45,10 @@ object ZoneState {
 
 
 case class ZoneConfig(
-//    minW: Double,
-//    maxW: Double,
-//    minH: Double,
-//    maxH: Double,
+    minW: Double,
+    maxW: Double,
+    minH: Double,
+    maxH: Double,
     coord: Coord
 )
 
@@ -122,8 +122,11 @@ object ZoneActor:
               x = x,
               y = y
             )
-            state.players.map(p => zone.getRef(p.id)).foreach { case Some(ref) =>
-              ref ! PlayerActor.UpdateWorld(config.coord, state.players, state.foods)
+            state.players.map(p => zone.getRef(p.id)).foreach {
+              case Some(ref) =>
+                ref ! PlayerActor.UpdateWorld(config.coord, state.players, state.foods)
+              case None =>
+                log.warn(s"Player reference not found for player in zone ${config.coord}")
             }
             Effect.persist(FoodAdded(food))
           case None =>
@@ -135,20 +138,21 @@ object ZoneActor:
           case Some(config) =>
             state.players.find(_.id == player.id) match
               case Some(p) =>
-                if zone.getRef(player.id).isEmpty then
+                if zone.getRef(player.id).isEmpty then {
                   zone.addPlayerRef(player.id, ref)
+                }
 
                 val (playersEaten, foodEaten) = getEatenEntities(player, state.foods, state.players)
                 if playersEaten.nonEmpty then
                   playersEaten.foreach { p => if zone.playersRef.contains(p.id) then
                     zone.getRef(p.id).get ! PlayerActor.RemovePlayer(p.id)
                   }
-                if playersEaten.nonEmpty || foodEaten.nonEmpty then
+                if (playersEaten.nonEmpty || foodEaten.nonEmpty) && isInBound(player, config) then
                   ref ! PlayerActor.Grow(foodEaten, playersEaten)
 
                 val players = state.players.filterNot(p => playersEaten.contains(p.id))
                 val foods = state.foods.filterNot(food => foodEaten.contains(food.id))
-                players.foreach { p =>
+                players.foreach { p => if zone.playersRef.contains(p.id) then
                     zone.getRef(p.id).get ! PlayerActor.UpdateWorld(config.coord, players, foods)
                 }
                 Effect.persist(Seq(PlayerMoved(player), PlayerRemoved(playersEaten.map(_.id)), FoodRemoved(foodEaten.map(_.id))))
@@ -168,6 +172,9 @@ object ZoneActor:
       .filterNot(_.id == player.id)
       .filter(p => EatingManager.canEatPlayer(player, p))
     (playersEaten, foodEaten)
+
+  private def isInBound(player: Player, config: ZoneConfig): Boolean =
+    player.x >= config.minW && player.x < config.maxW && player.y >= config.minH && player.y < config.maxH
 
 
 class Zone():

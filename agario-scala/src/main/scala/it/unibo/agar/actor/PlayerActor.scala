@@ -68,8 +68,8 @@ class PlayerEntity(
   }
 
   private def moving: Behavior[Command] = Behaviors.receiveMessage {
-    case UpdateWorld(zone, players, food) =>
-      stateManager.updateWorld(players.filterNot(p => p.id == playerId), zone, food)
+    case UpdateWorld(zone, players, foods) =>
+      stateManager.updateWorld(players.filterNot(p => p.id == playerId), zone, foods)
       Behaviors.same
     case Tick() =>
       val coord = stateManager.getPlayerSightLimit.map(p => stateManager.getCoord(p._1, p._2)).toSet
