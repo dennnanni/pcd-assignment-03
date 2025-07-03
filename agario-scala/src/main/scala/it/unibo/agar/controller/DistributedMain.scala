@@ -3,15 +3,13 @@ package it.unibo.agar.controller
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 import it.unibo.agar.actor.{PlayerActor, ZoneActor, ZoneConfig}
-import it.unibo.agar.model.{Player, WorldGrid}
+import it.unibo.agar.model.WorldGrid
 import it.unibo.agar.startup
 
 import scala.swing.{Frame, SimpleSwingApplication}
 
-class DistributedAgarIo extends SimpleSwingApplication:
+class DistributedAgarIo(playerId: String) extends SimpleSwingApplication:
 
   val playerSystem: ActorSystem[Nothing] = it.unibo.agar.startupWithSeeds("agario", 0, List(25251, 25252)) {
     Behaviors.setup[Nothing] { context =>
@@ -41,7 +39,8 @@ class DistributedAgarIo extends SimpleSwingApplication:
 
 object MainApp {
   def main(args: Array[String]): Unit = {
-    new DistributedAgarIo().main(args)
+    val playerId = if (args.nonEmpty) args(0) else "player1"
+    new DistributedAgarIo(playerId).main(args)
     Thread.currentThread().join()
   }
 }

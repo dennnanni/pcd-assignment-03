@@ -8,7 +8,7 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 import it.unibo.agar.model.{Coord, EatingManager, Food, Player}
 import it.unibo.agar.Message
 
-private sealed trait ZoneEvent
+private sealed trait ZoneEvent extends Message
 private final case class ZoneInitialized(config: ZoneConfig) extends ZoneEvent
 private final case class PlayerAdded(player: Player) extends ZoneEvent
 private final case class PlayerRemoved(playersId: Seq[String]) extends ZoneEvent
@@ -59,7 +59,6 @@ object ZoneActor:
   final case class LeaveZone(playerId: String) extends Command
   final case class AddFood(x: Double, y: Double) extends Command
   final case class MovePlayer(player: Player, ref: ActorRef[PlayerActor.Command]) extends Command
-  final case class AddPlayer(player: Player) extends Command
 
   val TypeKey: EntityTypeKey[Command] = EntityTypeKey[Command]("ZoneActor")
 
@@ -140,13 +139,12 @@ object ZoneActor:
                   zone.addPlayerRef(player.id, ref)
 
                 val (playersEaten, foodEaten) = getEatenEntities(player, state.foods, state.players)
-                val entitiesEaten = foodEaten ++ playersEaten
                 if playersEaten.nonEmpty then
                   playersEaten.foreach { p => if zone.playersRef.contains(p.id) then
                     zone.getRef(p.id).get ! PlayerActor.RemovePlayer(p.id)
                   }
-                if entitiesEaten.nonEmpty then
-                  ref ! PlayerActor.Grow(entitiesEaten)
+                if playersEaten.nonEmpty || foodEaten.nonEmpty then
+                  ref ! PlayerActor.Grow(foodEaten, playersEaten)
 
                 val players = state.players.filterNot(p => playersEaten.contains(p.id))
                 val foods = state.foods.filterNot(food => foodEaten.contains(food.id))

@@ -18,7 +18,7 @@ object PlayerActor:
   final case class Init(width: Double, height: Double, zones: Map[Coord, ActorRef[ZoneActor.Command]]) extends Command
   final case class Tick() extends Command
   final case class UpdateWorld(zone: Coord, players: Seq[Player], food: Seq[Food]) extends Command
-  final case class Grow(entities: Seq[Entity]) extends Command
+  final case class Grow(foods: Seq[Food], players: Seq[Player]) extends Command
   final case class RemovePlayer(playerId: String) extends Command
 
   def apply(playerId: String): Behavior[Command] =
@@ -36,7 +36,7 @@ class PlayerEntity(
   import PlayerActor.*
 
   private var stateManager = LocalGameStateManager.empty // Initial position and mass
-  private var currentZones: Map[Coord, EntityRef[ZoneActor.Command]] = Map.empty
+  private var currentZones: Seq[Coord] = Seq.empty
   private var allZones: Map[Coord, ActorRef[ZoneActor.Command]] = Map.empty
   private var view = LocalView.empty
 
@@ -46,8 +46,8 @@ class PlayerEntity(
       stateManager = LocalGameStateManager(
         Player(
           playerId,
-          500,//Random.between(0, width),
-          500,//Random.between(0, height),
+          Random.between(0, width),
+          Random.between(0, height),
           120.0
         ),
         width,
@@ -73,20 +73,24 @@ class PlayerEntity(
       Behaviors.same
     case Tick() =>
       val coord = stateManager.getPlayerSightLimit.map(p => stateManager.getCoord(p._1, p._2)).toSet
-      currentZones.filterNot { case (c, _) => coord.contains(c) }.foreach { case (_, z) =>
-        z ! ZoneActor.LeaveZone(playerId)
+      currentZones.filterNot { c => coord.contains(c) }.foreach { c =>
+        val zoneActor = ClusterSharding(context.system)
+          .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
+        zoneActor ! ZoneActor.LeaveZone(playerId)
       }
-      currentZones = currentZones.filter { case (c, _) => coord.contains(c) }
-      coord.diff(currentZones.keySet).foreach { c =>
+      currentZones = currentZones.filter { c => coord.contains(c) }
+      coord.diff(currentZones.toSet).foreach { c =>
         val zoneActor = ClusterSharding(context.system)
           .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
         
         zoneActor ! ZoneActor.EnterZone(stateManager.getPlayer, context.self)
-        currentZones += (c -> zoneActor)
+        currentZones = currentZones :+ c
       }
 
       stateManager.tick()
-      currentZones.foreach { case (_, zoneActor) =>
+      currentZones.foreach { c =>
+        val zoneActor = ClusterSharding(context.system)
+          .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
         zoneActor ! ZoneActor.MovePlayer(stateManager.getPlayer, context.self)
       }
       onEDT {
@@ -94,7 +98,8 @@ class PlayerEntity(
         view.repaint()
       }
       Behaviors.same
-    case Grow(entities) =>
+    case Grow(food, player) =>
+      val entities: Seq[Entity] = food ++ player
       val mass = entities.foldLeft(0.0)((acc, entity) => acc + entity.mass)
       SwingUtilities.invokeLater(() =>
         stateManager.player = stateManager.player.grow(mass)

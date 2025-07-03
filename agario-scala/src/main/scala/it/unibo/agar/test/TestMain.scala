@@ -43,12 +43,12 @@ object TestShardingPersistence:
     println("ACTOR SYSTEMS: " + actorSystems.map(_.address))
 
     val counterActor1 = ClusterSharding(actorSystems(0)).entityRefFor(CounterActor.TypeKey, "counter1")
-//    val counterActor2 = ClusterSharding(actorSystems(1)).entityRefFor(CounterActor.TypeKey, "counter2")
+    val counterActor2 = ClusterSharding(actorSystems(1)).entityRefFor(CounterActor.TypeKey, "counter2")
 
     Thread.sleep(1000)
     println("Sending Init to counterActors")
     counterActor1 ! CounterActor.Init()
-//    counterActor2 ! CounterActor.Init()
+    counterActor2 ! CounterActor.Init()
 
     Thread.sleep(1000)
 
@@ -56,6 +56,7 @@ object TestShardingPersistence:
 
     counter1From2 ! CounterActor.Increment()
     counter1From2 ! CounterActor.Increment()
+    counterActor2 ! CounterActor.Increment()
 
     Thread.sleep(1000)
 
