@@ -2,10 +2,10 @@ package it.unibo.agar.actor
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import akka.cluster.sharding.typed.scaladsl.EntityTypeKey
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityTypeKey}
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
-import it.unibo.agar.model.{Coord, EatingManager, Food, Player}
+import it.unibo.agar.model.{Coord, EatingManager, Food, Player, WorldGrid}
 import it.unibo.agar.Message
 
 private sealed trait ZoneEvent extends Message
@@ -43,7 +43,6 @@ object ZoneState {
   val empty: ZoneState = ZoneState(None)
 }
 
-
 case class ZoneConfig(
     width: Double,
     height: Double,
@@ -61,6 +60,7 @@ object ZoneActor:
   final case class LeaveZone(playerId: String) extends Command
   final case class AddFood(x: Double, y: Double) extends Command
   final case class MovePlayer(player: Player, ref: ActorRef[PlayerActor.Command]) extends Command
+  final case class GameOver() extends Command
 
   val TypeKey: EntityTypeKey[Command] = EntityTypeKey[Command]("ZoneActor")
 
@@ -81,12 +81,12 @@ object ZoneActor:
 
 
   private def commandHandler(
-                              ctx: ActorContext[Command],
+                              context: ActorContext[Command],
                               zone: Zone,
                               state: ZoneState,
                               command: Command
                             ): Effect[ZoneEvent, ZoneState] =
-    import ctx.log
+    import context.log
 
     command match {
       case Init(config) =>
@@ -160,10 +160,33 @@ object ZoneActor:
                 }
                 Effect.persist(Seq(PlayerMoved(player), PlayerRemoved(playersEaten.map(_.id)), FoodRemoved(foodEaten.map(_.id))))
               case _ =>
-                ctx.log.warn(s"zone-${config.coord.x}-${config.coord.y} => Player ${player.id} not found")
+                context.log.warn(s"zone-${config.coord.x}-${config.coord.y} => Player ${player.id} not found")
                 Effect.unhandled
           case None =>
             log.warn("Zone not initialized yet, ignoring EnterZone")
+            Effect.unhandled
+        }
+
+      case GameOver() =>
+        state.config match {
+          case Some(config) =>
+            log.info(s"Game over in zone ${config.coord}")
+
+            // Notify all zones that the game is over
+            val grid = WorldGrid(config.width, config.height, config.maxW - config.minW)
+            grid.allCoords.foreach { c =>
+              val zoneActor = ClusterSharding(context.system)
+                .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
+              zoneActor ! ZoneActor.GameOver()
+            }
+
+            state.players.foreach { p =>
+              if zone.playersRef.contains(p.id) then
+                zone.getRef(p.id).get ! PlayerActor.GameOver()
+            }
+            Effect.stop()
+          case None =>
+            log.warn("Zone not initialized yet, ignoring GameOver")
             Effect.unhandled
         }
     }
@@ -176,11 +199,11 @@ object ZoneActor:
       .filter(p => EatingManager.canEatPlayer(player, p))
     (playersEaten, foodEaten)
 
-  private def isInBound(player: Player, config: ZoneConfig): Boolean = 
+  private def isInBound(player: Player, config: ZoneConfig): Boolean =
     val widthAreaLimit =  if config.maxW == config.width then player.y <= config.maxW else player.y < config.maxW
     val heightAreaLimit =  if config.maxH == config.height then player.y <= config.maxH else player.y < config.maxH
     player.x >= config.minW && widthAreaLimit && player.y >= config.minH && heightAreaLimit
-  
+
 
 
 class Zone():

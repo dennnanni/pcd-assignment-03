@@ -20,6 +20,7 @@ object PlayerActor:
   final case class UpdateWorld(zone: Coord, players: Seq[Player], food: Seq[Food]) extends Command
   final case class Grow(foods: Seq[Food], players: Seq[Player]) extends Command
   final case class RemovePlayer(playerId: String) extends Command
+  final case class GameOver() extends Command
 
   def apply(playerId: String): Behavior[Command] =
     Behaviors.withTimers { timers =>
@@ -108,6 +109,11 @@ class PlayerEntity(
     case RemovePlayer(playerId) =>
       SwingUtilities.invokeLater(() =>
         view.showGameOver(s"Player $playerId has been removed from the game.")
+      )
+      Behaviors.stopped
+    case GameOver() =>
+      SwingUtilities.invokeLater(() =>
+        view.showGameOver("Game Over! You have been removed from the game.")
       )
       Behaviors.stopped
   }
