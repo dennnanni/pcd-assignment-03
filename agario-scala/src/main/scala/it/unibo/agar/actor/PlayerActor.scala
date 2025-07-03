@@ -2,7 +2,7 @@ package it.unibo.agar.actor
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityRef}
+import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import it.unibo.agar.model.{Coord, Entity, Food, LocalGameStateManager, Player}
 import it.unibo.agar.view.LocalView
 import it.unibo.agar.Message

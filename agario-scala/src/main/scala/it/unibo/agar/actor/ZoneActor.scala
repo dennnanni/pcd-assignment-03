@@ -24,7 +24,7 @@ final case class ZoneState(config: Option[ZoneConfig],
     case ZoneInitialized(c) =>
       copy(config = Some(c), initialized = true)
     case PlayerAdded(player) =>
-      copy(players = players ++ Seq(player))
+      copy(players = players.appended(player).distinctBy(p => p.id))
     case PlayerRemoved(playersId) =>
       copy(players = players.filterNot(p => playersId.contains(p.id)))
     case FoodAdded(food) =>
@@ -45,6 +45,8 @@ object ZoneState {
 
 
 case class ZoneConfig(
+    width: Double,
+    height: Double,
     minW: Double,
     maxW: Double,
     minH: Double,
@@ -89,7 +91,7 @@ object ZoneActor:
     command match {
       case Init(config) =>
         if state.initialized then
-          log.info("Zone already initialized, ignoring Init")
+          log.info(s"Zone already initialized, ignoring Init ${config}")
           Effect.none
         else
           log.info(s"Persisting ZoneInitialized for config: $config")
@@ -101,7 +103,7 @@ object ZoneActor:
               zone.addPlayerRef(player.id, playerRef)
             }
           case None =>
-            log.warn("Zone not initialized yet, ignoring EnterZone")
+            log.warn(s"Zone not initialized yet, ignoring EnterZone ${player.id}")
             Effect.unhandled
         }
       case LeaveZone(playerId) =>
@@ -111,7 +113,7 @@ object ZoneActor:
               zone.removeRef(playerId)
             }
           case None =>
-            log.warn("Zone not initialized yet, ignoring EnterZone")
+            log.warn(s"Zone not initialized yet, ignoring LeaveZone $playerId")
             Effect.unhandled
         }
       case AddFood(x, y) =>
@@ -152,8 +154,9 @@ object ZoneActor:
 
                 val players = state.players.filterNot(p => playersEaten.contains(p.id))
                 val foods = state.foods.filterNot(food => foodEaten.contains(food.id))
+                val playersInZone = players.filter(p => isInBound(p, config))
                 players.foreach { p => if zone.playersRef.contains(p.id) then
-                    zone.getRef(p.id).get ! PlayerActor.UpdateWorld(config.coord, players, foods)
+                    zone.getRef(p.id).get ! PlayerActor.UpdateWorld(config.coord, playersInZone, foods)
                 }
                 Effect.persist(Seq(PlayerMoved(player), PlayerRemoved(playersEaten.map(_.id)), FoodRemoved(foodEaten.map(_.id))))
               case _ =>
@@ -173,8 +176,11 @@ object ZoneActor:
       .filter(p => EatingManager.canEatPlayer(player, p))
     (playersEaten, foodEaten)
 
-  private def isInBound(player: Player, config: ZoneConfig): Boolean =
-    player.x >= config.minW && player.x < config.maxW && player.y >= config.minH && player.y < config.maxH
+  private def isInBound(player: Player, config: ZoneConfig): Boolean = 
+    val widthAreaLimit =  if config.maxW == config.width then player.y <= config.maxW else player.y < config.maxW
+    val heightAreaLimit =  if config.maxH == config.height then player.y <= config.maxH else player.y < config.maxH
+    player.x >= config.minW && widthAreaLimit && player.y >= config.minH && heightAreaLimit
+  
 
 
 class Zone():

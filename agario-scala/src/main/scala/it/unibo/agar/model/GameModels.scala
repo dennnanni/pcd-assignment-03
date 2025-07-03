@@ -70,9 +70,6 @@ case class World(
         coord -> playerList.filterNot(p => ids.map(_.id).contains(p.id))
     })
 
-//  def removeFoods(foodsToRemove: Seq[Food]): World =
-//    copy(foods = foods.filterNot(food => foodsToRemove.map(_.id).contains(food.id)))
-
   def updateFoods(zone: Coord, newFoods: Seq[Food]): World =
     copy(foods = foods.updated(zone, newFoods))
 

@@ -3,26 +3,34 @@ package it.unibo.agar.controller
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import it.unibo.agar.actor.{PlayerActor, ZoneActor, ZoneConfig}
+import it.unibo.agar.actor.{FoodGeneratorActor, PlayerActor, ZoneActor, ZoneConfig}
 import it.unibo.agar.model.WorldGrid
-import it.unibo.agar.startup
+import it.unibo.agar.{startup, startupWithSeeds}
 
 import scala.swing.{Frame, SimpleSwingApplication}
 
+private val WIDTH = 1000
+private val HEIGHT = 1000
+private val CELL_SIZE = 400
+
 class DistributedAgarIo(playerId: String) extends SimpleSwingApplication:
 
-  val playerSystem: ActorSystem[Nothing] = it.unibo.agar.startupWithSeeds("agario", 0, List(25251, 25252)) {
+  private val grid = WorldGrid(WIDTH, HEIGHT, CELL_SIZE)
+
+  val playerSystem: ActorSystem[Nothing] = startupWithSeeds("agario", 0, List(25251, 25252)) {
     Behaviors.setup[Nothing] { context =>
       val sharding = ClusterSharding(context.system)
 
       sharding.init(Entity(ZoneActor.TypeKey) { entityContext =>
         ZoneActor()
       })
+
+      sharding.init(Entity(FoodGeneratorActor.TypeKey) { entityContext =>
+        FoodGeneratorActor(grid.width, grid.height, grid.cellSize)
+      })
       Behaviors.empty
     }
   }
-
-  println("ACTOR SYSTEM DEL PLAYER " + playerSystem.address)
 
   Thread.sleep(5000)
 
@@ -46,8 +54,12 @@ object MainApp {
 }
 
 object ZonesMain:
+
+  private val foodGenerator = 3
+
   def main(args: Array[String]): Unit =
     val ports = List(25251, 25252, 0)
+    val grid = WorldGrid(WIDTH, HEIGHT, CELL_SIZE)
 
     val actorSystems = ports.map { port =>
       startup("agario", port) {
@@ -57,6 +69,10 @@ object ZonesMain:
           sharding.init(Entity(ZoneActor.TypeKey) { entityContext =>
             ZoneActor()
           })
+
+          sharding.init(Entity(FoodGeneratorActor.TypeKey) { entityContext =>
+            FoodGeneratorActor(grid.width, grid.height, grid.cellSize)
+          })
           Behaviors.empty
         }
       }
@@ -64,7 +80,6 @@ object ZonesMain:
 
     Thread.sleep(10000)
 
-    val grid = WorldGrid(1000, 1000, 400)
     var i: Int = 0
     val refs = grid.allCoords.map { coord =>
       val (minW, maxW, minH, maxH) = grid.boundsOf(coord)
@@ -76,7 +91,10 @@ object ZonesMain:
 
     refs.foreach { (c, ref) =>
       val (minW, maxW, minH, maxH) = grid.boundsOf(c)
-      ref ! ZoneActor.Init(ZoneConfig(minW, maxW, minH, maxH, c))
+      ref ! ZoneActor.Init(ZoneConfig(grid.width, grid.height, minW, maxW, minH, maxH, c))
     }
 
-    refs.head._2 ! ZoneActor.AddFood(100, 100)
+    Seq.range(0, foodGenerator).foreach { i =>
+      ClusterSharding(actorSystems.head)
+        .entityRefFor(FoodGeneratorActor.TypeKey, s"food-generator-$i") ! FoodGeneratorActor.AddFood()
+    }
