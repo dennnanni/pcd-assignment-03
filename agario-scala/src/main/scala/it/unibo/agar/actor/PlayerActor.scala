@@ -20,7 +20,7 @@ object PlayerActor:
   final case class UpdateWorld(zone: Coord, players: Seq[Player], food: Seq[Food]) extends Command
   final case class Grow(foods: Seq[Food], players: Seq[Player]) extends Command
   final case class RemovePlayer(playerId: String) extends Command
-  final case class GameOver() extends Command
+  final case class GameOver(playerId: String) extends Command
 
   def apply(playerId: String): Behavior[Command] =
     Behaviors.withTimers { timers =>
@@ -38,12 +38,18 @@ class PlayerEntity(
 
   private var stateManager = LocalGameStateManager.empty // Initial position and mass
   private var currentZones: Seq[Coord] = Seq.empty
-  private var allZones: Map[Coord, ActorRef[ZoneActor.Command]] = Map.empty
   private var view = LocalView.empty
+  
+  private val leavingOperation: () => Unit = () => {
+    currentZones.foreach { c =>
+      val zoneActor = ClusterSharding(context.system)
+        .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
+      zoneActor ! ZoneActor.LeaveZone(playerId)
+    }
+  }
 
   val idle: Behavior[Command] = Behaviors.receiveMessage {
     case Init(width, height, zones) =>
-      allZones = zones
       stateManager = LocalGameStateManager(
         Player(
           playerId,
@@ -56,6 +62,7 @@ class PlayerEntity(
       )
       view = LocalView(
         stateManager,
+        leavingOperation, 
         playerId
       )
       onEDT {
@@ -88,6 +95,7 @@ class PlayerEntity(
         currentZones = currentZones :+ c
       }
 
+
       stateManager.tick()
       currentZones.foreach { c =>
         val zoneActor = ClusterSharding(context.system)
@@ -105,15 +113,21 @@ class PlayerEntity(
       SwingUtilities.invokeLater(() =>
         stateManager.player = stateManager.player.grow(mass)
       )
+      if stateManager.getPlayer.mass >= 1000 then
+        currentZones.foreach { c =>
+          val zoneActor = ClusterSharding(context.system)
+            .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
+          zoneActor ! ZoneActor.ReachedLimit(playerId)
+        }
       Behaviors.same
     case RemovePlayer(playerId) =>
       SwingUtilities.invokeLater(() =>
-        view.showGameOver(s"Player $playerId has been removed from the game.")
+        view.showGameOver(s"Player $playerId has been eaten.")
       )
       Behaviors.stopped
-    case GameOver() =>
+    case GameOver(playerId) =>
       SwingUtilities.invokeLater(() =>
-        view.showGameOver("Game Over! You have been removed from the game.")
+        view.showGameOver(s"Game Over! ${playerId} won the game.")
       )
       Behaviors.stopped
   }

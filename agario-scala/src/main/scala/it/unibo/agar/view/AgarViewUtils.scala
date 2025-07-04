@@ -33,7 +33,7 @@ object AgarViewUtils:
     def toScreenLabel(x: Double, y: Double): (Int, Int) =
       ((x - offsetX - playerLabelOffsetX).toInt, (y - offsetY - playerLabelOffsetY).toInt)
 
-    val lines = Seq(0, 400, 800, 1200)
+    val lines = Seq(0, 400, 800, 1000, 1200)
     g.setColor(Color.LIGHT_GRAY)
 
     def worldX(x: Int): Int = x - offsetX.toInt

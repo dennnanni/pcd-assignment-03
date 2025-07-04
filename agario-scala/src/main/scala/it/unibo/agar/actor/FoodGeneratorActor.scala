@@ -36,9 +36,9 @@ class FoodGenerator(
 
   def foodGeneration: Behavior[Command] = Behaviors.receiveMessage {
     case AddFood() =>
+      println("Generating food")
       val (x, y) = (Random.between(0, width), Random.between(0, height))
       val coord = grid.coordFor(x, y)
-        context.log.info(s"Adding food at ($x, $y) in zone $coord")
       val zone = ClusterSharding(context.system).
         entityRefFor(ZoneActor.TypeKey, s"zone-${coord.x}-${coord.y}")
       zone ! ZoneActor.AddFood(x, y)

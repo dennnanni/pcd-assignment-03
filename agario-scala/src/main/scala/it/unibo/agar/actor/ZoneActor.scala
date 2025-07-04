@@ -10,6 +10,7 @@ import it.unibo.agar.Message
 
 private sealed trait ZoneEvent extends Message
 private final case class ZoneInitialized(config: ZoneConfig) extends ZoneEvent
+private final case class SubscriberAdded(subId: String) extends ZoneEvent
 private final case class PlayerAdded(player: Player) extends ZoneEvent
 private final case class PlayerRemoved(playersId: Seq[String]) extends ZoneEvent
 private final case class FoodAdded(food: Food) extends ZoneEvent
@@ -17,12 +18,15 @@ final case class FoodRemoved(uids: Seq[String]) extends ZoneEvent
 private final case class PlayerMoved(player: Player) extends ZoneEvent
 
 final case class ZoneState(config: Option[ZoneConfig],
+                           subscribersId: Seq[String] = Seq.empty,
                            players: Seq[Player] = Seq.empty,
                            foods: Seq[Food] = Seq.empty,
                            initialized: Boolean = false) {
   def applyEvent(event: ZoneEvent): ZoneState = event match {
     case ZoneInitialized(c) =>
       copy(config = Some(c), initialized = true)
+    case SubscriberAdded(subId) =>
+        copy(subscribersId = subscribersId :+ subId)
     case PlayerAdded(player) =>
       copy(players = players.appended(player).distinctBy(p => p.id))
     case PlayerRemoved(playersId) =>
@@ -56,11 +60,13 @@ case class ZoneConfig(
 object ZoneActor:
   sealed trait Command extends Message
   final case class Init(config: ZoneConfig) extends Command
+  final case class Subscribe(id: String) extends Command
   final case class EnterZone(player: Player, playerRef: ActorRef[PlayerActor.Command]) extends Command
   final case class LeaveZone(playerId: String) extends Command
   final case class AddFood(x: Double, y: Double) extends Command
   final case class MovePlayer(player: Player, ref: ActorRef[PlayerActor.Command]) extends Command
-  final case class GameOver() extends Command
+  final case class ReachedLimit(playerId: String) extends Command
+  final case class GameOver(playerId: String) extends Command
 
   val TypeKey: EntityTypeKey[Command] = EntityTypeKey[Command]("ZoneActor")
 
@@ -96,6 +102,8 @@ object ZoneActor:
         else
           log.info(s"Persisting ZoneInitialized for config: $config")
           Effect.persist(ZoneInitialized(config))
+      case Subscribe(id) =>
+        Effect.persist(SubscriberAdded(id))
       case EnterZone(player, playerRef) =>
         state.config match {
           case Some(config) =>
@@ -124,11 +132,16 @@ object ZoneActor:
               x = x,
               y = y
             )
-            state.players.map(p => zone.getRef(p.id)).foreach {
-              case Some(ref) =>
+            state.subscribersId.foreach { subscriber =>
+              val subscriberRef = ClusterSharding(context.system)
+                .entityRefFor(GlobalViewActor.TypeKey, subscriber)
+              subscriberRef ! GlobalViewActor.UpdateWorld(config.coord, state.players, state.foods)
+            }
+            state.players.map(p => (zone.getRef(p.id), p.id)).foreach {
+              case (Some(ref), p) =>
                 ref ! PlayerActor.UpdateWorld(config.coord, state.players, state.foods)
-              case None =>
-                log.warn(s"Player reference not found for player in zone ${config.coord}")
+              case (None, p) =>
+                log.warn(s"Player reference not found for ${p} in zone ${config.coord}")
             }
             Effect.persist(FoodAdded(food))
           case None =>
@@ -158,16 +171,21 @@ object ZoneActor:
                 players.foreach { p => if zone.playersRef.contains(p.id) then
                     zone.getRef(p.id).get ! PlayerActor.UpdateWorld(config.coord, playersInZone, foods)
                 }
+                state.subscribersId.foreach { subscriber =>
+                  val subscriberRef = ClusterSharding(context.system)
+                    .entityRefFor(GlobalViewActor.TypeKey, subscriber)
+                  subscriberRef ! GlobalViewActor.UpdateWorld(config.coord, playersInZone, foods)
+                }
                 Effect.persist(Seq(PlayerMoved(player), PlayerRemoved(playersEaten.map(_.id)), FoodRemoved(foodEaten.map(_.id))))
               case _ =>
                 context.log.warn(s"zone-${config.coord.x}-${config.coord.y} => Player ${player.id} not found")
                 Effect.unhandled
           case None =>
-            log.warn("Zone not initialized yet, ignoring EnterZone")
+            log.warn("Zone not initialized yet, ignoring MovePlayer")
             Effect.unhandled
         }
 
-      case GameOver() =>
+      case ReachedLimit(playerId) =>
         state.config match {
           case Some(config) =>
             log.info(s"Game over in zone ${config.coord}")
@@ -177,12 +195,25 @@ object ZoneActor:
             grid.allCoords.foreach { c =>
               val zoneActor = ClusterSharding(context.system)
                 .entityRefFor(ZoneActor.TypeKey, s"zone-${c._1}-${c._2}")
-              zoneActor ! ZoneActor.GameOver()
+              zoneActor ! ZoneActor.GameOver(playerId)
             }
-
+            Effect.stop()
+          case None =>
+            log.warn("Zone not initialized yet, ignoring GameOver")
+            Effect.unhandled
+        }
+      case GameOver(playerId) =>
+        state.config match {
+          case Some(config) =>
+            log.info(s"Game over in zone ${config.coord}")
+            state.subscribersId.foreach { subscriber =>
+              val subscriberRef = ClusterSharding(context.system)
+                .entityRefFor(GlobalViewActor.TypeKey, subscriber)
+              subscriberRef ! GlobalViewActor.GameOver(playerId)
+            }
             state.players.foreach { p =>
               if zone.playersRef.contains(p.id) then
-                zone.getRef(p.id).get ! PlayerActor.GameOver()
+                zone.getRef(p.id).get ! PlayerActor.GameOver(playerId)
             }
             Effect.stop()
           case None =>
@@ -200,7 +231,7 @@ object ZoneActor:
     (playersEaten, foodEaten)
 
   private def isInBound(player: Player, config: ZoneConfig): Boolean =
-    val widthAreaLimit =  if config.maxW == config.width then player.y <= config.maxW else player.y < config.maxW
+    val widthAreaLimit =  if config.maxW == config.width then player.x <= config.maxW else player.x < config.maxW
     val heightAreaLimit =  if config.maxH == config.height then player.y <= config.maxH else player.y < config.maxH
     player.x >= config.minW && widthAreaLimit && player.y >= config.minH && heightAreaLimit
 

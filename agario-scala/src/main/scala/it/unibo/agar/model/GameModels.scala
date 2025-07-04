@@ -85,19 +85,21 @@ class WorldGrid(val width: Double, val height: Double, val cellSize: Double) {
   val cols: Int = math.ceil(width / cellSize).toInt
   val rows: Int = math.ceil(height / cellSize).toInt
 
-  def allCoords: Seq[Coord] =
+  def allCoords: Seq[Coord] = {
     for {
       x <- 0 until cols
       y <- 0 until rows
     } yield Coord(x, y)
 
+  }
+
   def boundsOf(coord: Coord): (Double, Double, Double, Double) =
-    val minW = coord.x * cellSize
+    val minW = coord.y * cellSize
     val maxW = (minW + cellSize).min(width)
-    val minH = coord.y * cellSize
+    val minH = coord.x * cellSize
     val maxH = (minH + cellSize).min(height)
     (minW, maxW, minH, maxH)
 
   def coordFor(x: Double, y: Double): Coord =
-    Coord((x / cellSize).toInt, (y / cellSize).toInt)
+    Coord((y / cellSize).toInt, (x / cellSize).toInt)
 }

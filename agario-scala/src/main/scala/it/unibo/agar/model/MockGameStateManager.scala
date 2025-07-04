@@ -13,6 +13,10 @@ class MockGameStateManager(
   private var directions: Map[String, (Double, Double)] = Map.empty
   def getWorld: World = world
 
+  def updateWorld(zone: Coord, players: Seq[Player], foods: Seq[Food]): Unit =
+    world.players = world.players.updated(zone, players)
+    world.foods = world.foods.updated(zone, foods)
+
   // Move a player in a given direction (dx, dy)
   def movePlayerDirection(dx: Double, dy: Double, id: String = "default"): Unit =
     directions = directions.updated(id, (dx, dy))

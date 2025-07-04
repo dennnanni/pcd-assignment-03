@@ -3,10 +3,11 @@ package it.unibo.agar.controller
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import it.unibo.agar.actor.{FoodGeneratorActor, PlayerActor, ZoneActor, ZoneConfig}
+import it.unibo.agar.actor.{FoodGeneratorActor, GlobalViewActor, PlayerActor, ZoneActor, ZoneConfig}
 import it.unibo.agar.model.WorldGrid
 import it.unibo.agar.{startup, startupWithSeeds}
 
+import java.time.InstantSource.system
 import scala.swing.{Frame, SimpleSwingApplication}
 
 private val WIDTH = 1000
@@ -23,6 +24,10 @@ class DistributedAgarIo(playerId: String) extends SimpleSwingApplication:
 
       sharding.init(Entity(ZoneActor.TypeKey) { entityContext =>
         ZoneActor()
+      })
+
+      sharding.init(Entity(GlobalViewActor.TypeKey) { entityContext =>
+          GlobalViewActor("global-view")
       })
 
       sharding.init(Entity(FoodGeneratorActor.TypeKey) { entityContext =>
@@ -70,6 +75,10 @@ object ZonesMain:
             ZoneActor()
           })
 
+          sharding.init(Entity(GlobalViewActor.TypeKey) { entityContext =>
+            GlobalViewActor("global-view")
+          })
+
           sharding.init(Entity(FoodGeneratorActor.TypeKey) { entityContext =>
             FoodGeneratorActor(grid.width, grid.height, grid.cellSize)
           })
@@ -82,7 +91,6 @@ object ZonesMain:
 
     var i: Int = 0
     val refs = grid.allCoords.map { coord =>
-      val (minW, maxW, minH, maxH) = grid.boundsOf(coord)
       val zoneRef = ClusterSharding(actorSystems(i))
         .entityRefFor(ZoneActor.TypeKey, s"zone-${coord.x}-${coord.y}")
       i = (i + 1) % actorSystems.size
@@ -98,3 +106,48 @@ object ZonesMain:
       ClusterSharding(actorSystems.head)
         .entityRefFor(FoodGeneratorActor.TypeKey, s"food-generator-$i") ! FoodGeneratorActor.AddFood()
     }
+
+
+class Global() extends SimpleSwingApplication:
+
+  private val grid = WorldGrid(WIDTH, HEIGHT, CELL_SIZE)
+
+  val globalSystem: ActorSystem[Nothing] = startupWithSeeds("agario", 0, List(25251, 25252)) {
+    Behaviors.setup[Nothing] { context =>
+      val sharding = ClusterSharding(context.system)
+
+      sharding.init(Entity(ZoneActor.TypeKey) { entityContext =>
+        ZoneActor()
+      })
+
+      sharding.init(Entity(GlobalViewActor.TypeKey) { entityContext =>
+        GlobalViewActor("global-view")
+      })
+
+      sharding.init(Entity(FoodGeneratorActor.TypeKey) { entityContext =>
+        FoodGeneratorActor(grid.width, grid.height, grid.cellSize)
+      })
+      Behaviors.empty
+    }
+  }
+
+  Thread.sleep(5000)
+
+  val id = "global-view"
+
+  val globalView: ActorRef[GlobalViewActor.Command] = globalSystem.systemActorOf(
+    GlobalViewActor(id),
+    id
+  )
+
+  override def top: Frame = {
+    new Frame {visible = false}
+  }
+
+
+object GlobalViewMain {
+  def main(args: Array[String]): Unit = {
+    new Global()
+    Thread.currentThread().join()
+  }
+}
