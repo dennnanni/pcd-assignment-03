@@ -12,7 +12,6 @@ import scala.util.Random
 object FoodGeneratorActor:
   sealed trait Command extends Message
   final case class AddFood() extends Command
-  final case class StopGeneration() extends Command
 
   val TypeKey: EntityTypeKey[FoodGeneratorActor.Command] = EntityTypeKey[FoodGeneratorActor.Command]("FoodGenerator")
 
@@ -43,8 +42,5 @@ class FoodGenerator(
         entityRefFor(ZoneActor.TypeKey, s"zone-${coord.x}-${coord.y}")
       zone ! ZoneActor.AddFood(x, y)
       Behaviors.same
-    case StopGeneration() =>
-      context.log.info("Stopping food generation")
-      Behaviors.stopped
   }
 }

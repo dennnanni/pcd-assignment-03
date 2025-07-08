@@ -12,8 +12,6 @@ lazy val root = (project in file("."))
       "com.typesafe.akka" %% "akka-cluster-typed" % akkaVersion, // akka clustering module
       "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion,
-      "org.iq80.leveldb" % "leveldb" % "0.12",
-      "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "1.3.0",
       "com.typesafe.akka" %% "akka-serialization-jackson" % akkaVersion,
       "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
