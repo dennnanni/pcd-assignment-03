@@ -6,21 +6,25 @@ import it.unibo.agar.model.World;
 
 import javax.swing.*;
 import java.awt.*;
+import java.rmi.RemoteException;
 import java.util.Optional;
 
 public class GamePanel extends JPanel {
 
-    private final GameStateManager gameStateManager;
     private final String focusedPlayerId; // Null for global view
+    private World world;
 
-    public GamePanel(GameStateManager gameStateManager, String focusedPlayerId) {
-        this.gameStateManager = gameStateManager;
+    public GamePanel(String focusedPlayerId) {
         this.focusedPlayerId = focusedPlayerId;
         this.setFocusable(true); // Important for receiving keyboard/mouse events if needed directly
     }
 
-    public GamePanel(GameStateManager gameStateManager) {
-        this(gameStateManager, null); // Constructor for GlobalView
+    public GamePanel() {
+        this(null); // Constructor for GlobalView
+    }
+
+    public void updateWorld(World world) {
+        this.world = world;
     }
 
     @Override
@@ -28,8 +32,7 @@ public class GamePanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        World world = gameStateManager.getWorld();
-        if (focusedPlayerId != null) {
+		if (focusedPlayerId != null) {
             Optional<Player> playerOpt = world.getPlayerById(focusedPlayerId);
             if (playerOpt.isPresent()) {
                 Player player = playerOpt.get();

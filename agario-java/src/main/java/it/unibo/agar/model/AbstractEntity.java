@@ -1,12 +1,17 @@
 package it.unibo.agar.model;
 
 
-public abstract class AbstractEntity implements Entity {
-    private final String id;
-    private final double x;
-    private final double y;
-    private final double mass;
-    private final double radius;
+import java.io.Serializable;
+
+public abstract class AbstractEntity implements Entity, Serializable {
+    private String id;
+    private double x;
+    private double y;
+    private double mass;
+    private double radius;
+
+    protected AbstractEntity() {
+    }
 
     protected AbstractEntity(final String id, final double x, final double y, final double mass) {
         this.id = id;

@@ -1,20 +1,42 @@
 package it.unibo.agar.model;
 
+import java.io.Serializable;
+import java.rmi.RemoteException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-public class DefaultGameStateManager implements GameStateManager {
+import static java.lang.Double.max;
+import static java.lang.Double.min;
+
+public class DefaultGameStateManager implements GameStateManager, Serializable {
     private static final double PLAYER_SPEED = 2.0;
     private static final int MAX_FOOD_ITEMS = 150;
     private static final Random random = new Random();
     private World world;
     private final Map<String, Position> playerDirections;
+    private final Map<String, PlayerObject> playerObjects = new ConcurrentHashMap<>();
 
 
     public DefaultGameStateManager(final World initialWorld) {
         this.world = initialWorld;
         this.playerDirections = new HashMap<>();
         this.world.getPlayers().forEach(p -> playerDirections.put(p.getId(), Position.ZERO));
+    }
+
+    @Override
+    public void subscribePlayer(String playerId, PlayerObject playerObject) throws RemoteException {
+        world = world.addPlayer(playerId);
+        System.out.println("Players: " + world.getPlayers().stream()
+                .map(Player::getId)
+                .collect(Collectors.joining(", ")));
+        playerObjects.put(playerId, playerObject);
+    }
+
+    @Override
+    public void unsubscribePlayer(String playerId) throws RemoteException {
+        playerObjects.remove(playerId);
+        world = world.removePlayer(playerId);
     }
 
     @Override
@@ -33,14 +55,25 @@ public class DefaultGameStateManager implements GameStateManager {
     public void tick() {
         this.world = handleEating(moveAllPlayers(this.world));
         cleanupPlayerDirections();
+        for (Map.Entry<String, PlayerObject> entry : playerObjects.entrySet()) {
+            String playerId = entry.getKey();
+            PlayerObject playerObject = entry.getValue();
+            try {
+                playerObject.updateWorld(this.world);
+            } catch (RemoteException e) {
+                throw new RuntimeException("Error updating world for player: " + playerId, e);
+            }
+        }
     }
 
     private World moveAllPlayers(final World currentWorld) {
         final List<Player> updatedPlayers = currentWorld.getPlayers().stream()
             .map(player -> {
                 Position direction = playerDirections.getOrDefault(player.getId(), Position.ZERO);
-                final double newX = player.getX() + direction.x() * PLAYER_SPEED;
-                final double newY = player.getY() + direction.y() * PLAYER_SPEED;
+                double newX = player.getX() + direction.x() * PLAYER_SPEED;
+                double newY = player.getY() + direction.y() * PLAYER_SPEED;
+                newX = min(max(newX, 0), currentWorld.getWidth());
+                newY = min(max(newY, 0), currentWorld.getHeight());
                 return player.moveTo(newX, newY);
             })
             .collect(Collectors.toList());
@@ -49,7 +82,7 @@ public class DefaultGameStateManager implements GameStateManager {
     }
 
     private World handleEating(final World currentWorld) {
-        final List<Player> updatedPlayers = currentWorld.getPlayers().stream()
+        List<Player> updatedPlayers = currentWorld.getPlayers().stream()
                 .map(player -> growPlayer(currentWorld, player))
                 .toList();
 
@@ -62,6 +95,27 @@ public class DefaultGameStateManager implements GameStateManager {
                 .flatMap(player -> eatenPlayers(currentWorld, player).stream())
                 .distinct()
                 .toList();
+
+        playersToRemove.forEach(p -> {
+			try {
+				playerObjects.get(p.getId()).gameLost();
+			} catch (RemoteException e) {
+				throw new RuntimeException(e);
+			}
+		});
+
+        if (updatedPlayers.stream().anyMatch(Player::isWinner)) {
+            String winnerId = updatedPlayers.stream().filter(Player::isWinner).findFirst().get().getId();
+            updatedPlayers.forEach(p -> {
+                try {
+                    playerObjects.get(p.getId()).gameOver(winnerId);
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            playerObjects.clear();
+            updatedPlayers = new ArrayList<>();
+        }
 
         return new World(currentWorld.getWidth(), currentWorld.getHeight(), updatedPlayers, currentWorld.getFoods())
                 .removeFoods(foodsToRemove)
