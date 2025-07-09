@@ -5,6 +5,8 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 public interface GameStateManager extends Remote, Serializable {
+	void subscribeObserver(final String id, final GameObserver observer) throws RemoteException;
+	void unsubscribeObserver(final String id) throws RemoteException;
 	void subscribePlayer(final String playerId, final PlayerObject playerObject) throws RemoteException;
 	void unsubscribePlayer(final String playerId) throws RemoteException;
 	World getWorld() throws RemoteException;

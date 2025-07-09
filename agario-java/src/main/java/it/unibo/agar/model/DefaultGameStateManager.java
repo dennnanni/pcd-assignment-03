@@ -16,6 +16,7 @@ public class DefaultGameStateManager implements GameStateManager, Serializable {
     private World world;
     private final Map<String, Position> playerDirections;
     private final Map<String, PlayerObject> playerObjects = new ConcurrentHashMap<>();
+    private final Map<String, GameObserver> observers = new ConcurrentHashMap<>();
 
 
     public DefaultGameStateManager(final World initialWorld) {
@@ -25,16 +26,26 @@ public class DefaultGameStateManager implements GameStateManager, Serializable {
     }
 
     @Override
+    public void subscribeObserver(String id, GameObserver observer) throws RemoteException {
+        System.out.println("Subscribing observer: " + id);
+        observers.put(id, observer);
+    }
+
+    @Override
+    public void unsubscribeObserver(String id) throws RemoteException {
+        System.out.println("Unsubscribing observer: " + id);
+        observers.remove(id);
+    }
+
+    @Override
     public void subscribePlayer(String playerId, PlayerObject playerObject) throws RemoteException {
         world = world.addPlayer(playerId);
-        System.out.println("Players: " + world.getPlayers().stream()
-                .map(Player::getId)
-                .collect(Collectors.joining(", ")));
         playerObjects.put(playerId, playerObject);
     }
 
     @Override
     public void unsubscribePlayer(String playerId) throws RemoteException {
+        System.out.println("Unsubscribing player: " + playerId);
         playerObjects.remove(playerId);
         world = world.removePlayer(playerId);
     }
@@ -55,15 +66,22 @@ public class DefaultGameStateManager implements GameStateManager, Serializable {
     public void tick() {
         this.world = handleEating(moveAllPlayers(this.world));
         cleanupPlayerDirections();
-        for (Map.Entry<String, PlayerObject> entry : playerObjects.entrySet()) {
-            String playerId = entry.getKey();
-            PlayerObject playerObject = entry.getValue();
+        playerObjects.forEach((key, value) -> {
+			try {
+				value.updateWorld(this.world);
+			} catch (RemoteException e) {
+				throw new RuntimeException("Error updating world for player: " + key, e);
+			}
+		});
+
+        observers.forEach((key, observer) -> {
             try {
-                playerObject.updateWorld(this.world);
+                observer.updateWorld(this.world);
             } catch (RemoteException e) {
-                throw new RuntimeException("Error updating world for player: " + playerId, e);
+                System.err.println("Error notifying observer: " + key);
+                e.printStackTrace();
             }
-        }
+        });
     }
 
     private World moveAllPlayers(final World currentWorld) {
@@ -111,6 +129,15 @@ public class DefaultGameStateManager implements GameStateManager, Serializable {
                     playerObjects.get(p.getId()).gameOver(winnerId);
                 } catch (RemoteException e) {
                     throw new RuntimeException(e);
+                }
+            });
+
+            observers.forEach((key, observer) -> {
+                try {
+                    observer.gameOver(winnerId);
+                } catch (RemoteException e) {
+                    System.err.println("Error notifying observer of game over: " + key);
+                    e.printStackTrace();
                 }
             });
             playerObjects.clear();

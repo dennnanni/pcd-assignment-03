@@ -23,7 +23,7 @@ public class LocalView extends JFrame {
     public LocalView(GameStateManager gameStateManager, String playerId) {
         this.playerId = playerId;
         this.gameStateManager = gameStateManager;
-        this.world = World.empty(); // Initialize world from GameStateManager
+        this.world = World.empty();
 
         setTitle("Agar.io - Local View (" + playerId + ") (Java)");
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);

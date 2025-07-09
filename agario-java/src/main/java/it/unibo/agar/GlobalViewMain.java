@@ -1,11 +1,16 @@
 package it.unibo.agar;
 
+import it.unibo.agar.model.GameObserver;
+import it.unibo.agar.model.GameObserverImpl;
 import it.unibo.agar.model.GameStateManager;
+import it.unibo.agar.model.PlayerObjectImpl;
 import it.unibo.agar.view.GlobalView;
 import it.unibo.agar.view.LocalView;
 
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 
 public class GlobalViewMain {
 
@@ -23,6 +28,20 @@ public class GlobalViewMain {
 
 			globalView = new GlobalView();
 
+			GameObserver observer = new GameObserverImpl(globalView);
+			globalView.setOnClose(() -> {
+				// Unexport dell'oggetto remoto
+				try {
+					c.unsubscribePlayer(playerId);
+					UnicastRemoteObject.unexportObject(observer, true);
+				} catch (RemoteException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			UnicastRemoteObject.exportObject(observer, 0);
+			c.subscribeObserver(playerId, observer);
+
+			globalView.open();
 
 		} catch (Exception e) {
 			log("Client exception: " + e.toString());
