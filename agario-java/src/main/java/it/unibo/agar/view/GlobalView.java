@@ -1,6 +1,5 @@
 package it.unibo.agar.view;
 
-import it.unibo.agar.model.GameStateManager;
 import it.unibo.agar.model.World;
 
 import javax.swing.*;

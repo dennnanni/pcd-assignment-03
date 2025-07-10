@@ -51,11 +51,6 @@ public class DefaultGameStateManager implements GameStateManager, Serializable {
     }
 
     @Override
-    public World getWorld() {
-        return this.world;
-    }
-
-    @Override
     public void setPlayerDirection(final String playerId, final double dx, final double dy) {
         // Ensure player exists before setting direction
         if (world.getPlayerById(playerId).isPresent()) {
