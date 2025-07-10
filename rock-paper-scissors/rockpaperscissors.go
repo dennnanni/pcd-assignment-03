@@ -14,6 +14,12 @@ const (
 	Scissors Move = "Scissors"
 )
 
+const (
+	Lose = "lose"
+	Win  = "win"
+	Draw = "draw"
+)
+
 var moves = []Move{Rock, Paper, Scissors}
 
 // Result indicates who won: 0 = tie, 1 = player1, 2 = player2
@@ -41,7 +47,7 @@ func player(name string, req chan Request, results chan string) {
 		reply <- move
 
 		result := <-results
-		if result == "win" {
+		if result == Win {
 			score++
 		}
 		fmt.Printf("[Player %s] Move: %s | Result: %s | Score: %d\n", name, move, result, score)
@@ -63,16 +69,16 @@ func referee(p1Req, p2Req chan Request, p1Res, p2Res chan string) {
 		switch winner {
 		case 0:
 			fmt.Println("Draw")
-			p1Res <- "draw"
-			p2Res <- "draw"
+			p1Res <- Draw
+			p2Res <- Draw
 		case 1:
 			fmt.Println("Player1 wins")
-			p1Res <- "win"
-			p2Res <- "lose"
+			p1Res <- Win
+			p2Res <- Lose
 		case 2:
 			fmt.Println("Player2 wins")
-			p1Res <- "lose"
-			p2Res <- "win"
+			p1Res <- Lose
+			p2Res <- Win
 		}
 		time.Sleep(1 * time.Second)
 	}
